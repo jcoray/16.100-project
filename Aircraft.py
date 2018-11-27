@@ -1,5 +1,5 @@
 # Aircraft.py
-# Created by Team 2 - Jakob, Jose, and Austin
+# Created by Team 2 - Jakob, Jose, and Austin on 11/27/18
 
 import math
 import warnings
