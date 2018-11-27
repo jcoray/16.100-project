@@ -32,8 +32,8 @@ class Aircraft(object):
         return
     
     def averageLift(self):
-        winit = self.fp['woe'] + self.fp['wfuelland'] + self.fp['wpay']
-        Lavg = self.fp['g']*(winit - 1/2*self.fp['wfuel']) # By Jose
+        wfinal = self.fp['woe'] + self.fp['wfuelland'] + self.fp['wpay']
+        Lavg = self.fp['g']/2*(2*wfinal + self.fp['wfuel']) 
         return Lavg
     
     def profileDrag(self):
@@ -87,6 +87,10 @@ class Aircraft(object):
     def averageLD(self):
         return self.averageLift()/self.averageDrag()
         
+    def TSFC(self):
+        winit = self.fp['woe'] + self.fp['wfuelland'] + self.fp['wpay']
+        wfinal =  self.fp['woe'] + self.fp['wfuelland'] 
+        
 
 class Component(object):
     def __init__(self, name, isairfoil, length1, length2, awet, span = None):
@@ -116,7 +120,7 @@ s3sNacellL = Component('nacellL', False, 2.44, 4.0, 59.0/2) # awet is assumed to
 s3sNacellR = Component('nacellR', False, 2.44, 4.0, 59.0/2) # The nacell length was eyeballed
 s3sTails = Component('tails', True, .1*3.25, 3.25, 115) # Assume all the tails are one
 
-s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
+s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sTails])
 print('Dp', round(s3smax.profileDrag()))
 print('Di', round(s3smax.inducedDrag()))
 print('D', round(s3smax.averageDrag()))
