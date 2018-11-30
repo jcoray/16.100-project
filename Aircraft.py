@@ -4,6 +4,7 @@
 import math
 import warnings
 from skaero.atmosphere import coesa
+from scipy.optimize import minimize
 
 class Aircraft(object):
     '''An aircraft container'''
@@ -45,7 +46,7 @@ class Aircraft(object):
         self.fp = fp
 
         print("New altitude:", self.fp['alt'])
-        _, T, _, rho = coesa.table(self.fp['alt'])
+        _, Temp, _, rho = coesa.table(self.fp['alt'])
          
         if True: # Dumb if statement, but keeps indentation   
         #if 'rho'  not in self.fp:
@@ -54,7 +55,7 @@ class Aircraft(object):
             mu = 1.983e-5 # Dynamic Viscosity
             self.fp['nu']  = mu / self.fp['rho']
         #if 'ainf' not in self.fp:
-            self.fp['ainf']= math.sqrt(1.4 * 287.058 * T)
+            self.fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
         #if 'Vinf' not in self.fp:
             self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
         #if 'qinf' not in self.fp:
@@ -212,7 +213,42 @@ class Component(object):
         if span != None:
             self.span = span
         return
-        
+       
+
+def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
+    # State: (altitude, fuel)
+    x0 = (max_alt/2, max_wfuel/2)
+    bounds = [(0, max_alt), (0, max_wfuel)]
+
+    def set_fp_from_x(x):
+        aircraft.fp['alt'] = x[0] # Alt
+        aircraft.fp['wfuel']=x[1] # wfuel
+        aircraft.update_fp(aircraft.fp)
+
+    def thrust_obj(x):
+        set_fp_from_x(x)
+        T = aircraft.averageDrag()
+        return max_thrust - T
+
+    def wfuel_obj(x):
+        set_fp_from_x(x)
+        wfuel = aircraft.findWfuel()
+        return max_wfuel - wfuel
+    
+    thrust_constraint = {'type':'ineq', 'fun': thrust_obj}
+    wfuel_constraint  = {'type':'ineq', 'fun': wfuel_obj}
+    constraints = (thrust_constraint, wfuel_constraint)
+
+    def fuel_burn_obj(x):
+        set_fp_from_x(x)
+        wfuel = aircraft.findWfuel()
+        return wfuel
+
+    res = minimize(fuel_burn_obj, bounds=bounds,\
+        constraints=constraints)
+    print(res)
+    return res
+
 # NOTE:    Assuming wfuel is 15800, as said in lecture, to calculate L/D from Drag
 
 # FIX ME - Need to measure airfoil chords from diagram to calculate accurate Re numbers.
