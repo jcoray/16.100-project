@@ -32,22 +32,27 @@ class Aircraft(object):
             self.fp['T'] = self.fp['R'] / self.fp['Vinf'] # Total cruise time
         if 'wfinal' not in self.fp:
             self.fp['wfinal'] = self.fp['woe'] + self.fp['wfuelland'] + self.fp['wpay']
-        if 'winit'  not in self.fp:
-            self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
+        #~ if 'winit'  not in self.fp:
+            #~ self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
+        # TODO replace all instances of winit with wfinal + wfuel
             
         self.components = {c.name: c for c in components}
         return
     
-    def lift_at_time(self, t):
+    def lift_at_time(self, t, wfuel = None):
         ''' Find lift at time t after start of cruise flight '''
+        if wfuel == None: 
+            wfuel = self.fp['wfuel']
         if (t < 0) or (t > self.fp['T']):
             raise ValueError("t must be positive and less than total cruise time.")
-        lift = self.fp['g'] * (self.fp['winit']  - (self.fp['wfuel']/self.fp['T'])*t)
+        lift = self.fp['g'] * (wfuel+self.fp['wfinal']  - (wfuel/self.fp['T'])*t)
         return lift
 
-    def averageLift(self):
+    def averageLift(self,wfuel = None):
         ''' Calculates average lift using initial and final weights '''
-        Lavg = self.fp['g']/2*(2*self.fp['wfinal'] + self.fp['wfuel']) 
+        if wfuel == None: 
+            wfuel = self.fp['wfuel']
+        Lavg = self.fp['g']/2*(2*self.fp['wfinal'] + wfuel) 
         return Lavg
     
     def profileDrag(self):
@@ -98,34 +103,36 @@ class Aircraft(object):
         Dw = 0
         return Dw
         
-    def drag_at_time(self, t):
+    def drag_at_time(self, t, wfuel = None):
         ''' Find drag at time t after start of cruise flight '''
         if (t < 0) or (t > self.fp['T']):
             raise ValueError("t must be positive and less than total cruise time.")
-        lift = self.lift_at_time(t)
+        lift = self.lift_at_time(t, wfuel)
         drag = self.profileDrag() + self.waveDrag() + self.inducedDrag(lift=lift)
         return drag
 
-    def averageDrag(self, nsamples=50):
+    def averageDrag(self, wfuel= None, nsamples=50):
         # Values of drag average when using averaged lift vs iterating through time
         # are not that different.
         #return self.profileDrag() + self.inducedDrag() + self.waveDrag()
+        if wfuel == None: 
+            wfuel = self.fp['wfuel']
         drag_samples = []
         for i in range(nsamples):
             t = self.fp['T'] * (i / (nsamples-1))
-            drag = self.drag_at_time(t)
+            drag = self.drag_at_time(t, wfuel)
             drag_samples.append(drag)
         mean_drag = sum(drag_samples) / nsamples
         return mean_drag
     
-    def averageLD(self, nsamples=50):
+    def averageLD(self, wfuel = None, nsamples=50):
         # Similar to averageDrag, iterating through L/D values
         # vs using L and D's averages hadly changes anything
         #return self.averageLift()/self.averageDrag()
         ld_samples = []
         for i in range(nsamples):
             t = self.fp['T'] * (i / (nsamples-1))
-            ld = self.lift_at_time(t) / self.drag_at_time(t)
+            ld = self.lift_at_time(t, wfuel) / self.drag_at_time(t, wfuel)
             ld_samples.append(ld)
         mean_ld = sum(ld_samples) / nsamples
         return mean_ld
@@ -133,11 +140,27 @@ class Aircraft(object):
     # TSFC is assumed using the same logic with which we assume wfuel
     # In other words, the notes told us to assume TSFC = 1.42e-5
     # NOTE: winit and wfinal are now in the self.fp dictionary
-    def bregue_wfuel(self):
+    def bregue_wfuel(self, ld=None):
         ''' Estimates required wfuel from Bregue Range Equation model. '''
+        if ld == None: 
+            ld = self.averageLD()
         return self.fp['wfinal'] * (math.exp(self.fp['TSFC']*self.fp['g']*self.fp['R']
-                                    / (self.fp['Vinf']*self.averageLD())   ) - 1)
-        
+                                    / (self.fp['Vinf']*ld)   ) - 1)
+    
+    def findWfuel(self):
+        wld = self.fp['wfuel']
+        wbr = self.bregue_wfuel()
+        itercount = 0
+        while abs(wbr - wld) > .01:
+            # Hope convergance 
+            wld = wbr
+            ld = self.averageLD(wld)
+            wbr = self.bregue_wfuel(ld)
+            itercount += 1
+            #~ print('ld',ld)
+            #~ print('wbr',wbr)
+        print('itercount', itercount)
+        return wbr
 
 class Component(object):
     def __init__(self, name, isairfoil, length1, length2, awet, span = None):
@@ -180,6 +203,10 @@ print('L', round(s3smax.averageLift()))
 print('L/D', s3smax.averageLD())
 print("Guessed wfuel", s3smax.fp['wfuel'])
 print('Bregue wfuel', s3smax.bregue_wfuel())
+wfuel = s3smax.findWfuel()
+print("wfuel updated", s3smax.findWfuel())
+print('L/D updated', s3smax.averageLD(wfuel))
+
 
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
