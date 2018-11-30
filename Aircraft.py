@@ -7,7 +7,7 @@ from skaero.atmosphere import coesa
 
 class Aircraft(object):
     '''An aircraft container'''
-    def __init__(self, components, fp=None):
+    def __init__(self, components, ap=None, fp=None):
         ''' 
         fp (dict): SI units. Includes: 
         woe (operating empty MASS), wfuelland (fuel to land MASS), 
@@ -22,36 +22,52 @@ class Aircraft(object):
         # alt -> rho, nu = <mu> / rho, ainf = sqrt(<1.4*287.5>*T)
         
         # By default, assume a 737 max
+
+        # Aircraft parameters (all assumed constant)
+        if ap == None:
+            self.ap = {'woe':45e3, 'wfuelland':2300, 'wpay':20e3, \
+            'R':6500e3, 'g':9.81}
+        else: self.ap = ap
+
+        # Flight parameters (all assumed variable)
         if fp == None:
-            self.fp = {'woe':45e3, 'wfuelland':2300, 'wpay':20e3, 'wfuel':15800, \
-            'R':6500e3, 'Minf':0.78, 'g':9.8, 'alt': 10000, \
+            self.fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
             'TSFC': 1.42e-5}
         else: 
             self.fp = fp
 
-        _, T, _, rho = coesa.table(self.fp['alt'])
-            
-        if 'rho'  not in self.fp:
-            self.fp['rho'] = rho
-        if 'nu'   not in self.fp:
-            mu = 1.983e-5 # Dynamic Viscosity
-            self.fp['nu']  = mu / self.fp['rho']
-        if 'ainf' not in self.fp:
-            self.fp['ainf']= math.sqrt(1.4 * 287.058 * T)
-        if 'Vinf' not in self.fp:
-            self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
-        if 'qinf' not in self.fp:
-            self.fp['qinf'] = 1/2*self.fp['rho']*self.fp['Vinf']**2
-        if 'T' not in self.fp:
-            self.fp['T'] = self.fp['R'] / self.fp['Vinf'] # Total cruise time
-        if 'wfinal' not in self.fp:
-            self.fp['wfinal'] = self.fp['woe'] + self.fp['wfuelland'] + self.fp['wpay']
-        #~ if 'winit'  not in self.fp:
-            #~ self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
-        # TODO replace all instances of winit with wfinal + wfuel
+        self.update_fp(self.fp)
             
         self.components = {c.name: c for c in components}
         return
+
+    def update_fp(self, fp):
+        self.fp = fp
+
+        print("New altitude:", self.fp['alt'])
+        _, T, _, rho = coesa.table(self.fp['alt'])
+         
+        if True: # Dumb if statement, but keeps indentation   
+        #if 'rho'  not in self.fp:
+            self.fp['rho'] = rho
+        #if 'nu'   not in self.fp:
+            mu = 1.983e-5 # Dynamic Viscosity
+            self.fp['nu']  = mu / self.fp['rho']
+        #if 'ainf' not in self.fp:
+            self.fp['ainf']= math.sqrt(1.4 * 287.058 * T)
+        #if 'Vinf' not in self.fp:
+            self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
+        #if 'qinf' not in self.fp:
+            self.fp['qinf'] = 1/2*self.fp['rho']*self.fp['Vinf']**2
+        #if 'T' not in self.fp:
+            self.fp['T'] = self.ap['R'] / self.fp['Vinf'] # Total cruise time
+        #if 'wfinal' not in self.fp:
+            self.fp['wfinal'] = self.ap['woe'] + self.ap['wfuelland'] + self.ap['wpay']
+        #~ if 'winit'  not in self.fp:
+            #~ self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
+        # TODO replace all instances of winit with wfinal + wfuel
+        print("New fp:", self.fp)
+
     
     def lift_at_time(self, t, wfuel = None):
         ''' Find lift at time t after start of cruise flight '''
@@ -59,14 +75,14 @@ class Aircraft(object):
             wfuel = self.fp['wfuel']
         if (t < 0) or (t > self.fp['T']):
             raise ValueError("t must be positive and less than total cruise time.")
-        lift = self.fp['g'] * (wfuel+self.fp['wfinal']  - (wfuel/self.fp['T'])*t)
+        lift = self.ap['g'] * (wfuel+self.fp['wfinal']  - (wfuel/self.fp['T'])*t)
         return lift
 
     def averageLift(self,wfuel = None):
         ''' Calculates average lift using initial and final weights '''
         if wfuel == None: 
             wfuel = self.fp['wfuel']
-        Lavg = self.fp['g']/2*(2*self.fp['wfinal'] + wfuel) 
+        Lavg = self.ap['g']/2*(2*self.fp['wfinal'] + wfuel) 
         return Lavg
     
     def profileDrag(self):
@@ -158,7 +174,7 @@ class Aircraft(object):
         ''' Estimates required wfuel from Bregue Range Equation model. '''
         if ld == None: 
             ld = self.averageLD()
-        return self.fp['wfinal'] * (math.exp(self.fp['TSFC']*self.fp['g']*self.fp['R']
+        return self.fp['wfinal'] * (math.exp(self.fp['TSFC']*self.ap['g']*self.ap['R']
                                     / (self.fp['Vinf']*ld)   ) - 1)
     
     def findWfuel(self):
@@ -218,7 +234,7 @@ print('L/D', s3smax.averageLD())
 print("Guessed wfuel", s3smax.fp['wfuel'])
 print('Bregue wfuel', s3smax.bregue_wfuel())
 wfuel = s3smax.findWfuel()
-print("wfuel updated", s3smax.findWfuel())
+print("wfuel updated", wfuel)
 print('L/D updated', s3smax.averageLD(wfuel))
 
 
