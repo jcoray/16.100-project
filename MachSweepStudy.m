@@ -19,12 +19,10 @@ Mdd = 0.86 - 0.75 * tc_p - 0.05 * cl_perp;
 
 % Part 2
 
-M_inf = 0.72541;
+M_inf = 0.84;
 
 q_inf = 1/2 * rho * (300)^2 * M_inf^2
-CL = L/(q_inf*S_ref);
-p = [M_inf .75*tc_p-.86 0 .05*CL];
-r = roots(p);
-lamb = acosd(r)
+
+lambda = acosd((0.86 - 0.75 * tc_p - 0.05 * cl_perp)/M_inf)
 
 D_i = (L/b)^2/(q_inf*pi*e)
