@@ -3,6 +3,7 @@
 
 import math
 import warnings
+from skaero.atmosphere import coesa
 
 class Aircraft(object):
     '''An aircraft container'''
@@ -14,16 +15,29 @@ class Aircraft(object):
         R (range), Minf (Mach), ainf (speed o' sound), 
         g (like in F = m*g), rho (density inf), nu (kinematic visc)
         TSFC (Thrust Spec Fuel Consumption; Here because the notes gave us a value to use)
+
         '''
+
+        # _, T, _, rho = coesa.table(alt)
+        # alt -> rho, nu = <mu> / rho, ainf = sqrt(<1.4*287.5>*T)
         
         # By default, assume a 737 max
         if fp == None:
             self.fp = {'woe':45e3, 'wfuelland':2300, 'wpay':20e3, 'wfuel':15800, \
-            'R':6500e3, 'Minf':0.78, 'ainf':300, 'g':9.8, 'rho':0.41351, \
-            'nu':0.000035251, 'TSFC': 1.42e-5}
+            'R':6500e3, 'Minf':0.78, 'g':9.8, 'alt': 10000, \
+            'TSFC': 1.42e-5}
         else: 
             self.fp = fp
+
+        _, T, _, rho = coesa.table(self.fp['alt'])
             
+        if 'rho'  not in self.fp:
+            self.fp['rho'] = rho
+        if 'nu'   not in self.fp:
+            mu = 1.983e-5 # Dynamic Viscosity
+            self.fp['nu']  = mu / self.fp['rho']
+        if 'ainf' not in self.fp:
+            self.fp['ainf']= math.sqrt(1.4 * 287.058 * T)
         if 'Vinf' not in self.fp:
             self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
         if 'qinf' not in self.fp:
