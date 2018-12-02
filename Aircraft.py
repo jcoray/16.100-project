@@ -45,7 +45,7 @@ class Aircraft(object):
     def update_fp(self, fp):
         self.fp = fp
 
-        print("New altitude:", self.fp['alt'])
+        #print("New altitude:", self.fp['alt'])
         _, Temp, _, rho = coesa.table(self.fp['alt'])
          
         if True: # Dumb if statement, but keeps indentation   
@@ -67,7 +67,7 @@ class Aircraft(object):
         #~ if 'winit'  not in self.fp:
             #~ self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
         # TODO replace all instances of winit with wfinal + wfuel
-        print("New fp:", self.fp)
+        #print("New fp:", self.fp)
 
     
     def lift_at_time(self, t, wfuel = None):
@@ -190,7 +190,7 @@ class Aircraft(object):
             itercount += 1
             #~ print('ld',ld)
             #~ print('wbr',wbr)
-        print('itercount', itercount)
+        #print('itercount', itercount)
         return wbr
 
 class Component(object):
@@ -244,7 +244,7 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
         wfuel = aircraft.findWfuel()
         return wfuel
 
-    res = minimize(fuel_burn_obj, bounds=bounds,\
+    res = minimize(fuel_burn_obj, x0, bounds=bounds,\
         constraints=constraints)
     print(res)
     return res
@@ -272,8 +272,11 @@ print('Bregue wfuel', s3smax.bregue_wfuel())
 wfuel = s3smax.findWfuel()
 print("wfuel updated", wfuel)
 print('L/D updated', s3smax.averageLD(wfuel))
+print()
 
-
+print("Fuel burn optimization:")
+res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
+print("Optimal altitude (m), optimal wfuel (kg):", *res.x)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
