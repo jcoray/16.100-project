@@ -257,8 +257,8 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
 s3smaxFP   = None
 s3sWing    = Component('wing',    True,  .13*3, 3,  210, span=35.79) # RE should be the cord not the span
 s3sFuse    = Component('fuse',    False, 3.76, 38,  415)
-s3sNacellL = Component('nacellL', False, 2.44,  4.0, 59.0/2) # awet is assumed to be for both
-s3sNacellR = Component('nacellR', False, 2.44,  4.0, 59.0/2) # The nacell length was eyeballed
+s3sNacellL = Component('nacellL', True, 0.69,  3.38, 59.0/2) # awet is assumed to be for both
+s3sNacellR = Component('nacellR', True, 0.69,  3.38, 59.0/2) # The nacell length was eyeballed
 s3sTails   = Component('tails',   True,  .1*3.25, 3.25, 115) # Assume all the tails are one
 
 s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
