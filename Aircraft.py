@@ -44,6 +44,10 @@ class Aircraft(object):
         self.components = {c.name: c for c in components}
         return
 
+    def update_alt(self, alt):
+        self.fp['alt'] = alt
+        self.update_fp(self.fp)
+
     def update_fp(self, fp):
         self.fp = fp
 
@@ -227,7 +231,11 @@ def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
         aircraft.update_fp(aircraft.fp)
         wfuel_list.append(aircraft.findWfuel())
     
-    plt.plot(alt, wfuel_list)
+    plt.plot(wfuel_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Wfuel (kg)")
+    plt.title("Altitude-Fuel-Burn")
+    plt.grid('on')
     plt.show()
     
     pass
@@ -298,8 +306,10 @@ print('L/D updated', s3smax.averageLD(wfuel))
 print()
 
 print("Fuel burn optimization:")
-#~ res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
-#~ print("Optimal altitude (m), optimal wfuel (kg):", *res.x)
+res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
+print("Found optimal. Setting aircraft fp to optimal:")
+s3smax.update_alt(res.x[0])
+print("Optimal altitude (m), optimal wfuel (kg):", res.x[0], s3smax.findWfuel())
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
