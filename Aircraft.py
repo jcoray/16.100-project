@@ -29,7 +29,7 @@ class Aircraft(object):
         # Aircraft parameters (all assumed constant)
         if ap == None:
             self.ap = {'woe':45e3, 'wfuelland':2300, 'wpay':20e3, \
-            'R':6500e3, 'g':9.81}
+            'R':6500e3, 'g':9.81, 'Sref':127}
         else: self.ap = ap
 
         # Flight parameters (all assumed variable)
@@ -240,9 +240,42 @@ def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
     
     pass
     
+def alt_drag_plot(aircraft, max_alt, max_wfuel, max_thrust):
+    alt = np.linspace(0, max_alt, 100)
     
+    drag_list = list()
+    for alti in alt:
+        aircraft.fp['alt'] = alti 
+        aircraft.update_fp(aircraft.fp)
+        drag_list.append(aircraft.drag_at_time(0))
     
+    plt.plot(drag_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Drag (N)")
+    plt.title("Altitude-Drag")
+    plt.grid('on')
+    plt.show()
     
+    pass    
+    
+def alt_cl_plot(aircraft, max_alt, max_wfuel, max_thrust):
+    alt = np.linspace(0, max_alt, 100)
+    
+    cl_list = list()
+    for alti in alt:
+        aircraft.fp['alt'] = alti 
+        aircraft.update_fp(aircraft.fp)
+        cl_list.append(aircraft.lift_at_time(0)/(0.5*aircraft.fp['rho']*aircraft.ap['Sref']*aircraft.fp['Vinf']**2))
+
+    
+    plt.plot(cl_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("C_L")
+    plt.title("Altitude-Cl")
+    plt.grid('on')
+    plt.show()
+    
+    pass      
     
     
 
@@ -313,6 +346,8 @@ print("Optimal altitude (m), optimal wfuel (kg):", res.x[0], s3smax.findWfuel())
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
-alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+# alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+# alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
+alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
 
 
