@@ -5,6 +5,8 @@ import math
 import warnings
 from skaero.atmosphere import coesa
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import numpy as np
 
 class Aircraft(object):
     '''An aircraft container'''
@@ -214,6 +216,27 @@ class Component(object):
             self.span = span
         return
        
+       
+def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
+    alt = np.linspace(0, max_alt, 100)
+    
+    wfuel_list = list()
+    for alti in alt:
+        aircraft.fp['alt'] = alti 
+        aircraft.fp['wfuel'] = max_wfuel/2
+        aircraft.update_fp(aircraft.fp)
+        wfuel_list.append(aircraft.findWfuel())
+    
+    plt.plot(alt, wfuel_list)
+    plt.show()
+    
+    pass
+    
+    
+    
+    
+    
+    
 
 def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     # State: (altitude, fuel)
@@ -275,10 +298,11 @@ print('L/D updated', s3smax.averageLD(wfuel))
 print()
 
 print("Fuel burn optimization:")
-res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
-print("Optimal altitude (m), optimal wfuel (kg):", *res.x)
+#~ res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
+#~ print("Optimal altitude (m), optimal wfuel (kg):", *res.x)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
+alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
 
 
