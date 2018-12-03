@@ -310,6 +310,37 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     print(res)
     return res
 
+def altitude_study_data(aircraft, altitudes):
+    ''' 
+    Collects data for altitude study, including:
+    altitude, wfuel, qinf, total drag, induced drag, profile drag, CL, L/D
+    '''
+    dash = '-' * 40
+
+    data = []
+    for a in altitudes:
+        aircraft.fp['alt'] = a
+        aircraft.update_fp(aircraft.fp)
+        wfuel = aircraft.findWfuel()
+        qinf = aircraft.fp['qinf']
+
+        lift = aircraft.lift_at_time(0)
+        drag = aircraft.drag_at_time(0)
+        indDrag = aircraft.inducedDrag(lift=lift)
+        profDrag = aircraft.profileDrag()
+        CL = lift / (0.5*aircraft.fp['rho']*aircraft.ap['Sref']*aircraft.fp['Vinf']**2)
+        LD = lift / drag
+
+        data.append([a, wfuel, qinf, drag, indDrag, profDrag, CL, LD])
+
+    headers = ['Altitude (m)', 'wfuel (kg)', 'qinf (Pa)', 'drag (N)', 'indDrag (N)', 'profDrag (N)', 'CL (1)', 'LD (1)']
+
+    print("ALTITUDE STUDY DATA")
+    print(*headers, sep='\t')
+    for d in data:
+        print(*d, sep='\t')
+    return data
+
 # NOTE:    Assuming wfuel is 15800, as said in lecture, to calculate L/D from Drag
 
 # FIX ME - Need to measure airfoil chords from diagram to calculate accurate Re numbers.
@@ -338,18 +369,23 @@ print()
 print("Fuel burn optimization:")
 res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
 print("Found optimal. Setting aircraft fp to optimal:")
-s3smax.fp['alt'] = res.x[0]
+optimal_alt = res.x[0]
+s3smax.fp['alt'] = optimal_alt
 s3smax.update_fp(s3smax.fp)
 optimal_wfuel = s3smax.findWfuel()
 s3smax.fp['wfuel'] = optimal_wfuel
-print("Optimal altitude (m), optimal wfuel (kg):", res.x[0], optimal_wfuel)
+print("Optimal altitude (m), optimal wfuel (kg):", optimal_alt, optimal_wfuel)
 print("Optimal fp:")
 print(s3smax.fp)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
-alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+#alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
 # alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
 # alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
+
+print()
+altitudes = list(np.linspace(3e3, 15e3, 5)) + [round(optimal_alt)]
+altitude_study_data(s3smax, altitudes)
 
 
