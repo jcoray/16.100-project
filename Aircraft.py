@@ -44,10 +44,6 @@ class Aircraft(object):
         self.components = {c.name: c for c in components}
         return
 
-    def update_alt(self, alt):
-        self.fp['alt'] = alt
-        self.update_fp(self.fp)
-
     def update_fp(self, fp):
         self.fp = fp
 
@@ -197,6 +193,7 @@ class Aircraft(object):
             #~ print('ld',ld)
             #~ print('wbr',wbr)
         #print('itercount', itercount)
+        self.fp['wfuel'] = wbr
         return wbr
 
 class Component(object):
@@ -235,7 +232,7 @@ def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
     plt.ylabel("Altitude (m)")
     plt.xlabel("Wfuel (kg)")
     plt.title("Altitude-Fuel-Burn")
-    plt.grid('on')
+    plt.grid(True)
     plt.show()
     
     pass
@@ -253,7 +250,7 @@ def alt_drag_plot(aircraft, max_alt, max_wfuel, max_thrust):
     plt.ylabel("Altitude (m)")
     plt.xlabel("Drag (N)")
     plt.title("Altitude-Drag")
-    plt.grid('on')
+    plt.grid(True)
     plt.show()
     
     pass    
@@ -270,9 +267,9 @@ def alt_cl_plot(aircraft, max_alt, max_wfuel, max_thrust):
     
     plt.plot(cl_list, alt)
     plt.ylabel("Altitude (m)")
-    plt.xlabel("C_L")
-    plt.title("Altitude-Cl")
-    plt.grid('on')
+    plt.xlabel("$C_L$")
+    plt.title("Altitude-$C_L$")
+    plt.grid(True)
     plt.show()
     
     pass      
@@ -341,13 +338,18 @@ print()
 print("Fuel burn optimization:")
 res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
 print("Found optimal. Setting aircraft fp to optimal:")
-s3smax.update_alt(res.x[0])
-print("Optimal altitude (m), optimal wfuel (kg):", res.x[0], s3smax.findWfuel())
+s3smax.fp['alt'] = res.x[0]
+s3smax.update_fp(s3smax.fp)
+optimal_wfuel = s3smax.findWfuel()
+s3smax.fp['wfuel'] = optimal_wfuel
+print("Optimal altitude (m), optimal wfuel (kg):", res.x[0], optimal_wfuel)
+print("Optimal fp:")
+print(s3smax.fp)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
-# alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
 # alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
-alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
+# alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
 
 
