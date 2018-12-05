@@ -98,6 +98,30 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     print(res)
     return res
 
+def optimize_fuel_burn_again(aircraft, max_alt):
+    # State: (altitude, Sref, Aeng)
+    x0 = (max_alt/2, 127, math.pi*(2.44**2)/4)
+    bounds = [(0, max_alt)] # TODO: Figure out how to plug-in partially defined bounds
+
+    # TODO: Create function to set state in aircraft
+    def set_state(x):
+        # Set state in aircraft
+        # TODO: Figure out how to input wfuel here and in subsequent funs.
+        pass
+
+    # TODO: Create constraint objective functions:
+    # Drag divergence, Fuel capacity
+
+    def mdd_obj(x):
+        set_state(x)
+        mdd = aircraft.mdd()
+        m_perp = aircraft.m_perp()
+        return mdd - m_perp
+
+    def fuel_cap_obj(x):
+        set_state(x)
+        
+
 def altitude_study_data(aircraft, altitudes):
     ''' 
     Collects data for altitude study, including:

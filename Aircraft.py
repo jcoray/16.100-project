@@ -11,7 +11,7 @@ class Baseline(Aircraft):
         self.wfuel = aircraft.findWfuel()
         self.woe = aircraft.woe()
         self.Sref = self.ap['Sref']
-         _, Temp, p, rho = coesa.table(aircraft.fp['alt'])
+        _, Temp, p, rho = coesa.table(aircraft.fp['alt'])
         self.p_inf = p
         self.rho_inf = rho
         self.Cext
@@ -67,7 +67,7 @@ class Aircraft(object):
         
     
     def woe(self):
-        woe = sum(map(lamdba component: component.mass(), self.components.values()))
+        woe = sum(map(lambda component: component.mass(), self.components.values()))
         return woe
         
     def update_fp(self, fp):
