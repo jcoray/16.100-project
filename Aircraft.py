@@ -48,24 +48,22 @@ class Aircraft(object):
             'TSFC': 1.42e-5, 'Sref':127}
         else: 
             self.fp = fp
+        
+        self.components = {c.name: c for c in components}
 
         self.update_fp(self.fp)
-            
-        self.components = {c.name: c for c in components}
-        
-        self.baseline = self._initBaseline()
-        
-    
-    def _initBaseline(self):
-        getDrag
-        getWfuel
-        getWoe
-        getSref
-        getCexternal
-        getPinf
-        getRhoinf
-    return 
-        
+
+    #~ 
+    #~ def _initBaseline(self):
+        #~ getDrag
+        #~ getWfuel
+        #~ getWoe
+        #~ getSref
+        #~ getCexternal
+        #~ getPinf
+        #~ getRhoinf
+    #~ return 
+        #~ 
     
     def woe(self):
         woe = sum(map(lambda component: component.mass(), self.components.values()))
@@ -74,7 +72,9 @@ class Aircraft(object):
     def update_fp(self, fp):
         ''' 
         Updates the aircraft state given an optimization state.
-        Inputs: parameters that changed. Then updates the rest of the aircraft to match
+        Inputs: parameters that changed. Then updates the rest of the aircraft to match.
+        
+        WARNING: Nothing other than this function should modify flight parameters.
         '''
         
         self.fp = fp
@@ -82,28 +82,20 @@ class Aircraft(object):
         #print("New altitude:", self.fp['alt'])
         _, Temp, _, rho = coesa.table(self.fp['alt'])
          
-        if True: # Dumb if statement, but keeps indentation   
-        #if 'rho'  not in self.fp:
-            self.fp['rho'] = rho
-        #if 'nu'   not in self.fp:
-            mu = 1.983e-5 # Dynamic Viscosity
-            self.fp['nu']  = mu / self.fp['rho']
-        #if 'ainf' not in self.fp:
-            self.fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
-        #if 'Vinf' not in self.fp:
-            self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
-        #if 'qinf' not in self.fp:
-            self.fp['qinf'] = 1/2*self.fp['rho']*self.fp['Vinf']**2
-        #if 'T' not in self.fp:
-            self.fp['T'] = self.ap['R'] / self.fp['Vinf'] # Total cruise time
-        #if 'wfinal' not in self.fp:
-            self.fp['wfinal'] = self.woe() + self.ap['wfuelland'] + self.ap['wpay']
-        #~ if 'winit'  not in self.fp:
-            #~ self.fp['winit'] = self.fp['wfinal'] + self.fp['wfuel']
-        # TODO replace all instances of winit with wfinal + wfuel
+        self.fp['rho'] = rho
+        mu = 1.983e-5 # Dynamic Viscosity
+        self.fp['nu']  = mu / self.fp['rho']
+        self.fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
+        self.fp['Vinf'] = self.fp['Minf']*self.fp['ainf']
+        self.fp['qinf'] = 1/2*self.fp['rho']*self.fp['Vinf']**2
+        self.fp['T'] = self.ap['R'] / self.fp['Vinf'] # Total cruise time
+        self.fp['wfinal'] = self.woe() + self.ap['wfuelland'] + self.ap['wpay'] # Woe will I be. 
+        self.fp['wfuel'] = self.findWfuel() 
+        
+        
         #print("New fp:", self.fp)
-
-
+        return self.fp
+    
         
     def lift_at_time(self, t, wfuel = None):
         ''' Find lift at time t after start of cruise flight '''
@@ -214,7 +206,7 @@ class Aircraft(object):
                                     / (self.fp['Vinf']*ld)   ) - 1)
     def averageCL(self, wfuel = None):
         L = averageLift(self,wfuel)
-        Cl = L/(1/2*self.fp['rho']*self.fp['Vinf']**2 * self.Sref???)
+        Cl = L/(1/2*self.fp['rho']*self.fp['Vinf']**2 * self.fp['Sref'])
         return Cl
     
     def mdd(self, wfuel=None):
@@ -242,7 +234,6 @@ class Aircraft(object):
             #~ print('ld',ld)
             #~ print('wbr',wbr)
         #print('itercount', itercount)
-        self.fp['wfuel'] = wbr
         return wbr
 
 class Component(object):
@@ -283,7 +274,7 @@ class Component(object):
 
 
 class Wing(Component):
-    def __init__(self, length1, length2, awet, mass, span, K_wing, Lambda, rho_box, omega_box, c_ext0)
+    def __init__(self, length1, length2, awet, mass, span, K_wing, Lambda, rho_box, omega_box, c_ext0):
         self._span = span
         self.K_wing = K_wing
         self._Lambda = _Lambda
@@ -294,7 +285,7 @@ class Wing(Component):
         Component.__init__(name='wing', isairfoil=True, length1, length2, awet, mass)
 
     
-    def Lambda(self)
+    def Lambda(self):
         # TODO placeholder until we vary Lambda
         return self._Lambda
     

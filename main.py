@@ -173,6 +173,8 @@ s3sTails   = Tail(   .1*3.25, 3.25,  115, 0) # Assume all the tails are one
 
 
 s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
+baseline = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
+
 print('Dp', round(s3smax.profileDrag()))
 print('Di', round(s3smax.inducedDrag()))
 print('D', round(s3smax.averageDrag()))
