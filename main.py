@@ -40,22 +40,40 @@ def alt_fuel_plot_again(aircraft, baseline, max_alt):
     plt.grid(True)
     plt.show()
 
-# def all_plots_sref_part(aircraft, baseline, max_alt):
-#     alt = np.linspace(0, max_alt, 100)
+def all_plots_sref_part(aircraft, baseline, max_alt):
+    alt = np.linspace(0, max_alt, 100)
 
-#     wfuel_list = list()
-#     mdd_list = list()
-#     m_perp_list=list()
-#     for alti in alt:
-#         res = optimize_fuel_burn_again(aircraft, baseline, alti)
-#         wfuel_list.append(res.fun)
+    wfuel_list = list()
+    mdd_m_perp_diff_list = list()
+    wmax_wfuel_diff_list = list()
+    for alti in alt:
+        res = optimize_fuel_burn_again(aircraft, baseline, alti)
+        wfuel = res.fun
+        wfuel_list.append(wfuel)
+        mdd_m_perp_diff_list.append(aircraft.mdd() - aircraft.m_perp())
+        wmax = baseline.ap['rho_fuel'] * aircraft.components['wing'].vtank()
+        wmax_wfuel_diff_list.append(wmax - wfuel)
 
-#     plt.plot(wfuel_list, alt)
-#     plt.ylabel("Altitude (m)")
-#     plt.xlabel("Wfuel (kg)")
-#     plt.title("Altitude-Fuel-Burn (varying Sref)")
-#     plt.grid(True)
-#     plt.show()
+    plt.plot(wfuel_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Wfuel (kg)")
+    plt.title("Altitude-Fuel-Burn (varying Sref)")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(mdd_m_perp_diff_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Mdd - M_perp")
+    plt.title("Mach Number Constraint (Positive means within constraint)")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(wmax_wfuel_diff_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Wmax - Wfuel")
+    plt.title("Fuel Capacity Constraint (Positive means within constraint)")
+    plt.grid(True)
+    plt.show()
     
 
     
@@ -284,10 +302,11 @@ altitude_study_data(s3smax, altitudes)
 
 print()
 print("So it begins")
-test_alt = 20e3
+test_alt = 15e3
 print("Test alt:", test_alt)
 res = optimize_fuel_burn_again(s3smax, baseline, test_alt)
 print(s3smax.fp)
 
 print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
-alt_fuel_plot_again(s3smax, baseline, 15e3)
+#alt_fuel_plot_again(s3smax, baseline, 15e3)
+all_plots_sref_part(s3smax, baseline, 15e3)
