@@ -206,6 +206,22 @@ class Aircraft(object):
             ld = self.averageLD()
         return self.fp['wfinal'] * (math.exp(self.fp['TSFC']*self.ap['g']*self.ap['R']
                                     / (self.fp['Vinf']*ld)   ) - 1)
+    def averageCL(self, wfuel = None):
+        L = averageLift(self,wfuel)
+        Cl = L/(1/2*self.fp['rho']*self.fp['Vinf']**2 * self.Sref???)
+        return Cl
+    
+    def mdd(self, wfuel=None):
+        '''M_drag-drivergance'''
+        tc_perp = self.components['wing'].tc_perp()
+        CL = self.averageCL(wfuel)
+        Lambda = self.components['wing'].Lambda()
+        mdragdiv = .86 - .75 * tc_perp - .05 * CL / (math.cos(Lambda)**2)
+        return mdragdiv
+        
+    def m_perp(self):
+        return self.fp['Minf']*math.cos(self.components['wing'].Lambda())
+    
     
     def findWfuel(self):
         wld = self.fp['wfuel']
@@ -268,28 +284,33 @@ class Wing(Component):
         self.rho_box = rho_box 
         self.omega_box = omega_box
         self._c_ext0 = c_ext0
+        self.Sref0 = 
         Component.__init__(name='wing', isairfoil=True, length1, length2, awet, mass)
 
     
     def Lambda(self)
-        # placeholder until we vary Lambda
+        # TODO placeholder until we vary Lambda
         return self._Lambda
     
     def span(self):
         return self._span
     
     def AR(self):
-        # placeholder until we vary AR
+        # TODO placeholder until we vary AR
         self._span / self._c
     
     def tc_perp(self):
-        
+        #~ return self.Lambda
+        # TODO placeholder until we vary Lambda
+        return .14
         
     def Sref(self):
         self.span() * self.c()
         
-    def c_ext(self):
-        return 
+    def c_ext(self, Sref0):
+        # Math by Jose
+        return self.Sref()/Sref0 * self._c_ext0**2
+
     def awet(self, fuse):
         '''
         Wetted area of the wing.
@@ -312,7 +333,7 @@ class Wing(Component):
         wpay - mass of the payload (kg)
         '''
         wingMass = self.K_wing * 1/self.tc_perp() * 1/cos(self.Lambda())**3 * \
-        self.AR()**(3/2.0 * self.Sref()**(1/2.0) * self.rho_box/self.omega_box * \
+        self.AR()**(3/2.0) * self.Sref()**(1/2.0) * self.rho_box/self.omega_box * \
         (fuse.mass() + wpay)
         return wingMass
         
