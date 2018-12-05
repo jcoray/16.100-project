@@ -5,6 +5,17 @@ import math
 import warnings
 from skaero.atmosphere import coesa
 
+class Baseline(Aircraft):
+    def __init__(self, aircraft):
+        self.averageDrag = aircraft.averageDrag()
+        self.wfuel = aircraft.findWfuel()
+        self.woe = aircraft.woe()
+        self.Sref = self.ap['Sref']
+         _, Temp, p, rho = coesa.table(aircraft.fp['alt'])
+        self.p_inf = p
+        self.rho_inf = rho
+        self.Cext
+    
 
 class Aircraft(object):
     '''An aircraft container'''
@@ -40,7 +51,20 @@ class Aircraft(object):
         self.update_fp(self.fp)
             
         self.components = {c.name: c for c in components}
-        return
+        
+        self.baseline = self._initBaseline()
+        
+    
+    def _initBaseline(self):
+        getDrag
+        getWfuel
+        getWoe
+        getSref
+        getCexternal
+        getPinf
+        getRhoinf
+    return 
+        
     
     def woe(self):
         woe = sum(map(lamdba component: component.mass(), self.components.values()))
@@ -237,16 +261,17 @@ class Component(object):
 
 
 class Wing(Component):
-    def __init__(self, length1, length2, awet, mass, span, K_wing, Lambda, rho_box, omega_box)
+    def __init__(self, length1, length2, awet, mass, span, K_wing, Lambda, rho_box, omega_box, c_ext0)
         self._span = span
         self.K_wing = K_wing
         self._Lambda = _Lambda
         self.rho_box = rho_box 
         self.omega_box = omega_box
+        self._c_ext0 = c_ext0
         Component.__init__(name='wing', isairfoil=True, length1, length2, awet, mass)
 
     
-    def Lamdba(self)
+    def Lambda(self)
         # placeholder until we vary Lambda
         return self._Lambda
     
@@ -256,11 +281,15 @@ class Wing(Component):
     def AR(self):
         # placeholder until we vary AR
         self._span / self._c
+    
     def tc_perp(self):
+        
         
     def Sref(self):
         self.span() * self.c()
         
+    def c_ext(self):
+        return 
     def awet(self, fuse):
         '''
         Wetted area of the wing.

@@ -142,7 +142,7 @@ def altitude_study_data(aircraft, altitudes):
 #~ s3sTails   = Component('tails',   True,  .1*3.25, 3.25, 115) # Assume all the tails are one
 
 s3smaxFP   = None
-s3sWing    = Wing(     .13*3,    3,  210, None, span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8) 
+s3sWing    = Wing(     .13*3,    3,  210, None, span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, c_ext0 = 6.67) 
 s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
 s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000) # awet is assumed to be for both # The nacell length was eyeballed
 s3sTails   = Tail(   .1*3.25, 3.25,  115, None) # Assume all the tails are one
