@@ -113,6 +113,7 @@ def optimize_fuel_burn_again(aircraft, baseline, max_alt):
         aircraft.fp['Aeng']= x[2]
         aircraft.components = update_components(baseline, aircraft.fp)
         aircraft.update_fp(aircraft.fp)
+        aircraft.findAeng(baseline)
 
     # TODO: Create constraint objective functions:
     # Drag divergence, Fuel capacity
@@ -175,49 +176,7 @@ def altitude_study_data(aircraft, altitudes):
         print(*d, sep='\t')
     return data
 
-def update_components(baseline, fp):
-    # Freestream stuff (mostly for engine)
-    _, Temp, p, rho = coesa.table(fp['alt'])
-    fp['rho'] = rho
-    fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
-    fp['Vinf'] = fp['Minf']*fp['ainf']
 
-    # Fuselage
-    fuse = baseline.components['fuse']
-
-    # Wing (Sref, AR, t/c (from baseline) )
-    Sref = fp['Sref']
-    AR = fp['AR']
-    tc = baseline.components['wing'].tc()
-    c = math.sqrt(Sref / AR)
-    b = math.sqrt(Sref * AR)
-    t = tc * c # t/c * c
-    wing = Wing(t, c, b, *baseline.components['wing'].get_constants())
-    
-    # Tail
-    ftail = 0.2
-    mass_wing = wing.mass(fuse, baseline.ap['wpay'])
-    mass_tail = ftail * mass_wing
-    fref = Sref / baseline.fp['Sref']
-    awet = fref * baseline.components['tail'].awet()
-    ttail = math.sqrt(fref) * baseline.components['tail'].t()
-    ctail = math.sqrt(fref) * baseline.components['tail'].c()
-    tail = Tail(ttail, ctail, awet, mass_tail)
-
-    # Engine
-    Aeng = fp['Aeng']
-    feng = Aeng / baseline.components['engine'].Aeng()
-    awet_eng = feng * baseline.components['engine'].awet()
-    teng = math.sqrt(feng) * baseline.components['engine'].t()
-    ceng = math.sqrt(feng) * baseline.components['engine'].c()
-    mass_eng = fp['rho'] * fp['Vinf'] / (baseline.fp['rho']*baseline.fp['Vinf']) \
-                * baseline.components['engine'].mass()
-    engine = Engine(teng, ceng, awet_eng, mass_eng, Aeng)
-
-    # Final components array
-    components_list = [fuse, wing, tail, engine]
-    components = {c.name: c for c in components_list}
-    return components
 
 # NOTE:    Assuming wfuel is 15800, as said in lecture, to calculate L/D from Drag
 
@@ -296,3 +255,4 @@ print("So it begins")
 res = optimize_fuel_burn_again(s3smax, baseline, 15e3)
 print(s3smax.fp)
 
+#alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)

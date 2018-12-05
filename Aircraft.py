@@ -237,6 +237,50 @@ class Aircraft(object):
         #print('itercount', itercount)
         return wbr
 
+    def findAeng(self, baseline):
+        # For current plane
+        _, Temp, p, rho = coesa.table(self.fp['alt'])
+        Aeng_guess = self.fp['Aeng']
+        D = self.averageDrag()
+        M = self.fp['Minf']
+
+        # For baseline plane
+        _, Temp0, p0, rho0 = coesa.table(baseline.fp['alt'])
+        Aeng0 = baseline.fp['Aeng']
+        D0 = baseline.averageDrag()
+        M0 = baseline.fp['Minf']
+
+        # Scaling
+        feng_Drag = (D / D0) * (M0 / M) * (p0 / p)
+        feng_Area = Aeng_guess / Aeng0
+
+        #print("Beginning Aeng iterations:")
+        while abs(feng_Drag - feng_Area) > .01:
+            # For current plane
+            # _, Temp, p, rho = coesa.table(self.fp['alt'])
+            Aeng_guess = self.fp['Aeng']
+            D = self.averageDrag()
+            M = self.fp['Minf']
+
+            # For baseline plane (NOTHING CHANGES AT ALL)
+            # _, Temp0, p0, rho0 = coesa.table(baseline.fp['alt'])
+            # Aeng0 = baseline.fp['Aeng']
+            #D0 = baseline.averageDrag()
+            #M0 = baseline.fp['Minf']
+
+            # Scaling
+            feng_Drag = (D / D0) * (M0 / M) * (p0 / p)
+            feng_Area = Aeng_guess / Aeng0
+
+            # New guess
+            Aeng_guess = feng_Drag * Aeng0
+            self.fp['Aeng'] = Aeng_guess
+            self.components = update_components(baseline, self.fp)
+            self.update_fp(self.fp)
+
+        # Aeng is not set in self's fp
+        return Aeng_guess
+
 class Component(object):
     def __init__(self, name, isairfoil, length1, length2, awet, mass):
         ''' name (str): e.g. Main wing, horizontal tail
@@ -415,5 +459,47 @@ class Engine(Component):
 
         
 
+def update_components(baseline, fp):
+    # Freestream stuff (mostly for engine)
+    _, Temp, p, rho = coesa.table(fp['alt'])
+    fp['rho'] = rho
+    fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
+    fp['Vinf'] = fp['Minf']*fp['ainf']
+
+    # Fuselage
+    fuse = baseline.components['fuse']
+
+    # Wing (Sref, AR, t/c (from baseline) )
+    Sref = fp['Sref']
+    AR = fp['AR']
+    tc = baseline.components['wing'].tc()
+    c = math.sqrt(Sref / AR)
+    b = math.sqrt(Sref * AR)
+    t = tc * c # t/c * c
+    wing = Wing(t, c, b, *baseline.components['wing'].get_constants())
     
+    # Tail
+    ftail = 0.2
+    mass_wing = wing.mass(fuse, baseline.ap['wpay'])
+    mass_tail = ftail * mass_wing
+    fref = Sref / baseline.fp['Sref']
+    awet = fref * baseline.components['tail'].awet()
+    ttail = math.sqrt(fref) * baseline.components['tail'].t()
+    ctail = math.sqrt(fref) * baseline.components['tail'].c()
+    tail = Tail(ttail, ctail, awet, mass_tail)
+
+    # Engine
+    Aeng = fp['Aeng']
+    feng = Aeng / baseline.components['engine'].Aeng()
+    awet_eng = feng * baseline.components['engine'].awet()
+    teng = math.sqrt(feng) * baseline.components['engine'].t()
+    ceng = math.sqrt(feng) * baseline.components['engine'].c()
+    mass_eng = fp['rho'] * fp['Vinf'] / (baseline.fp['rho']*baseline.fp['Vinf']) \
+                * baseline.components['engine'].mass()
+    engine = Engine(teng, ceng, awet_eng, mass_eng, Aeng)
+
+    # Final components array
+    components_list = [fuse, wing, tail, engine]
+    components = {c.name: c for c in components_list}
+    return components
        
