@@ -134,12 +134,19 @@ def altitude_study_data(aircraft, altitudes):
 # FIX ME - Need to measure airfoil chords from diagram to calculate accurate Re numbers.
 # FIXED  - Jakob measured the chords and found thicknesses using the t/c ratios.
 
+#~ s3smaxFP   = None
+#~ s3sWing    = Component('wing',    True,  .13*3, 3,  210, span=35.79) # RE should be the cord not the span
+#~ s3sFuse    = Component('fuse',    False, 3.76, 38,  415)
+#~ s3sNacellL = Component('nacellL', True, 0.69,  3.38, 59.0/2) # awet is assumed to be for both
+#~ s3sNacellR = Component('nacellR', True, 0.69,  3.38, 59.0/2) # The nacell length was eyeballed
+#~ s3sTails   = Component('tails',   True,  .1*3.25, 3.25, 115) # Assume all the tails are one
+
 s3smaxFP   = None
-s3sWing    = Component('wing',    True,  .13*3, 3,  210, span=35.79) # RE should be the cord not the span
-s3sFuse    = Component('fuse',    False, 3.76, 38,  415)
-s3sNacellL = Component('nacellL', True, 0.69,  3.38, 59.0/2) # awet is assumed to be for both
-s3sNacellR = Component('nacellR', True, 0.69,  3.38, 59.0/2) # The nacell length was eyeballed
-s3sTails   = Component('tails',   True,  .1*3.25, 3.25, 115) # Assume all the tails are one
+s3sWing    = Wing(     .13*3,    3,  210, None, span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8) 
+s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
+s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000) # awet is assumed to be for both # The nacell length was eyeballed
+s3sTails   = Tail(   .1*3.25, 3.25,  115, None) # Assume all the tails are one
+
 
 s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
 print('Dp', round(s3smax.profileDrag()))
