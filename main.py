@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 from skaero.atmosphere import coesa
-
+import copy
 
 def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
     alt = np.linspace(0, max_alt, 100)
@@ -50,7 +50,7 @@ def alt_cl_plot(aircraft, max_alt, max_wfuel, max_thrust):
     for alti in alt:
         aircraft.fp['alt'] = alti 
         aircraft.update_fp(aircraft.fp)
-        cl_list.append(aircraft.lift_at_time(0)/(0.5*aircraft.fp['rho']*aircraft.ap['Sref']*aircraft.fp['Vinf']**2))
+        cl_list.append(aircraft.lift_at_time(0)/(0.5*aircraft.fp['rho']*aircraft.fp['Sref']*aircraft.fp['Vinf']**2))
 
     
     plt.plot(cl_list, alt)
@@ -140,7 +140,7 @@ def altitude_study_data(aircraft, altitudes):
         drag = aircraft.drag_at_time(0)
         indDrag = aircraft.inducedDrag(lift=lift)
         profDrag = aircraft.profileDrag()
-        CL = lift / (0.5*aircraft.fp['rho']*aircraft.ap['Sref']*aircraft.fp['Vinf']**2)
+        CL = lift / (0.5*aircraft.fp['rho']*aircraft.fp['Sref']*aircraft.fp['Vinf']**2)
         LD = lift / drag
 
         data.append([a, wfuel, qinf, drag, indDrag, profDrag, CL, LD])
@@ -165,15 +165,22 @@ def altitude_study_data(aircraft, altitudes):
 #~ s3sNacellR = Component('nacellR', True, 0.69,  3.38, 59.0/2) # The nacell length was eyeballed
 #~ s3sTails   = Component('tails',   True,  .1*3.25, 3.25, 115) # Assume all the tails are one
 
-s3smaxFP   = None
-s3sWing    = Wing(     .13*3,    3,  210, 45000-(19200+11000), span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, c_ext0 = 6.67) 
+# base_ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81}
+# base_fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+#             'TSFC': 1.42e-5, 'Sref':127}
+
+ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81}
+fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+            'TSFC': 1.42e-5, 'Sref':127}
+
+s3sWing    = Wing(     .13*3,    3, span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
 s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
-s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000) # awet is assumed to be for both # The nacell length was eyeballed
-s3sTails   = Tail(   .1*3.25, 3.25,  115, 0) # Assume all the tails are one
+s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, math.pi*2.44**2 / 4) # awet is assumed to be for both # The nacell length was eyeballed
+s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
 
 
-s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
-baseline = Aircraft( [s3sWing, s3sFuse, s3sNacellL, s3sNacellR, s3sTails])
+s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
+baseline = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
 
 print('Dp', round(s3smax.profileDrag()))
 print('Di', round(s3smax.inducedDrag()))
@@ -201,7 +208,7 @@ print(s3smax.fp)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
-#alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+# alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
 # alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
 # alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
 

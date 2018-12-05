@@ -4,22 +4,11 @@
 import math
 import warnings
 from skaero.atmosphere import coesa
-
-class Baseline(Aircraft):
-    def __init__(self, aircraft):
-        self.averageDrag = aircraft.averageDrag()
-        self.wfuel = aircraft.findWfuel()
-        self.woe = aircraft.woe()
-        self.Sref = self.ap['Sref']
-        _, Temp, p, rho = coesa.table(aircraft.fp['alt'])
-        self.p_inf = p
-        self.rho_inf = rho
-        self.Cext
     
 
 class Aircraft(object):
     '''An aircraft container'''
-    def __init__(self, components, ap=None, fp=None):
+    def __init__(self, components, ap, fp):
         ''' 
         fp (dict): SI units. Includes: 
         woe (operating empty MASS), wfuelland (fuel to land MASS), 
@@ -36,18 +25,19 @@ class Aircraft(object):
         # By default, assume a 737 max
 
         # Aircraft parameters (all assumed constant)
-        if ap == None:
-            self.ap = {'wfuelland':2300, 'wpay':20e3, \
-            'R':6500e3, 'g':9.81}
-        else: self.ap = ap
+        # if ap == None:
+        #     self.ap = {'wfuelland':2300, 'wpay':20e3, \
+        #     'R':6500e3, 'g':9.81}
+        # else: 
+        self.ap = ap
 
         # Flight parameters (Optimization Parameters)
         # Initial these are the baseline parameters
-        if fp == None:
-            self.fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
-            'TSFC': 1.42e-5, 'Sref':127}
-        else: 
-            self.fp = fp
+        # if fp == None:
+        #     self.fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+        #     'TSFC': 1.42e-5, 'Sref':127}
+        # else: 
+        self.fp = fp
         
         self.components = {c.name: c for c in components}
 
@@ -66,7 +56,12 @@ class Aircraft(object):
         #~ 
     
     def woe(self):
-        woe = sum(map(lambda component: component.mass(), self.components.values()))
+        woe = 0
+        for component in self.components.values():
+            if component.name == 'wing':
+                woe += component.mass(self.components['fuse'], self.ap['wpay'])
+            else:
+                woe += component.mass()
         return woe
         
     def update_fp(self, fp):
@@ -136,7 +131,12 @@ class Aircraft(object):
             else:
                 dili = component.d()/component.l()
                 Kfi = 1 + 1.5*(dili)**1.5 + 7*(dili)**3
-            Dpi = self.fp['qinf'] * Kfi * Cfi * component.awet()
+            
+            if component.name == 'wing':
+                awet = component.awet(self.components['fuse'])
+            else: 
+                awet  = component.awet()
+            Dpi = self.fp['qinf'] * Kfi * Cfi * awet
             Dp += Dpi 
         
         return Dp
@@ -274,15 +274,14 @@ class Component(object):
 
 
 class Wing(Component):
-    def __init__(self, length1, length2, awet, mass, span, K_wing, Lambda, rho_box, omega_box, c_ext0):
+    def __init__(self, length1, length2, span, K_wing, Lambda, rho_box, omega_box, taper):
         self._span = span
         self.K_wing = K_wing
-        self._Lambda = _Lambda
+        self._Lambda = Lambda
         self.rho_box = rho_box 
         self.omega_box = omega_box
-        self._c_ext0 = c_ext0
-        self.Sref0 = 
-        Component.__init__(name='wing', isairfoil=True, length1, length2, awet, mass)
+        self.taper = taper
+        Component.__init__(self, name='wing', isairfoil=True, length1=length1, length2=length2, awet=None, mass=None)
 
     
     def Lambda(self):
@@ -294,7 +293,7 @@ class Wing(Component):
     
     def AR(self):
         # TODO placeholder until we vary AR
-        self._span / self._c
+        return self._span / self._c
     
     def tc_perp(self):
         #~ return self.Lambda
@@ -302,11 +301,11 @@ class Wing(Component):
         return .14
         
     def Sref(self):
-        self.span() * self.c()
+        return self.span() * self.c()
         
-    def c_ext(self, Sref0):
+    def c_ext(self):
         # Math by Jose
-        return self.Sref()/Sref0 * self._c_ext0**2
+        return 2 * self.c() / (1 + self.taper)
 
     def awet(self, fuse):
         '''
@@ -318,7 +317,7 @@ class Wing(Component):
         because the extended portion of the planform area inside the 
         fuselage does not contribute to the wetted area.
         '''
-        Sext = fuse.d * self.c_ext
+        Sext = fuse.d() * self.c_ext()
         return 2*(self.Sref() - Sext)
         
     def mass(self, fuse, wpay):
@@ -329,74 +328,78 @@ class Wing(Component):
         
         wpay - mass of the payload (kg)
         '''
-        wingMass = self.K_wing * 1/self.tc_perp() * 1/cos(self.Lambda())**3 * \
+        wingMass = self.K_wing * 1/self.tc_perp() * 1/math.cos(self.Lambda())**3 * \
         self.AR()**(3/2.0) * self.Sref()**(1/2.0) * self.rho_box/self.omega_box * \
         (fuse.mass() + wpay)
         return wingMass
         
 class Fuselage(Component):
-     def __init__(self, length1, length2, awet, mass)
-        Component.__init__(name='fuse', isairfoil=False, length1, length2, awet, mass)
+     def __init__(self, length1, length2, awet, mass):
+        Component.__init__(self, name='fuse', isairfoil=False, length1=length1, length2=length2, awet=awet, mass=mass)
         
 class Tail(Component):
-    def __init__(self, length1, length2, awet, mass)
-        Component.__init__(name='tail', isairfoil=True, length1, length2, awet, mass)
+    def __init__(self, length1, length2, awet, mass):
+        Component.__init__(self, name='tail', isairfoil=True, length1=length1, length2=length2, awet=awet, mass=mass)
         
-    def mass(wing):
-        ''' 
-        Mass of the tail.
+    # def mass(self, wing):
+    #     ''' 
+    #     Mass of the tail.
         
-        wing - wing component
-        '''
-        f_tail = .2
-        return f_tail * wing.mass()
+    #     wing - wing component
+    #     '''
+    #     f_tail = .2
+    #     return f_tail * wing.mass()
     
-    def f_tail_ref(self):
-        raise ValueError('Write meeeeee')
+    # def f_tail_ref(self):
+    #     raise ValueError('Write meeeeee')
     
-    def c(self):
-        # For the baseline, we just look at our self. 
-        return self._c * math.sqrt(self.f_tail_ref)
-    def t(self):
-        return self._t * math.sqrt(self.f_tail_ref)
-    def span(self):
-        return self._span * math.sqrt(self.f_tail_ref)
+    # def c(self):
+    #     # For the baseline, we just look at our self. 
+    #     return self._c * math.sqrt(self.f_tail_ref)
+    # def t(self):
+    #     return self._t * math.sqrt(self.f_tail_ref)
+    # def span(self):
+    #     return self._span * math.sqrt(self.f_tail_ref)
 
     
 class Engine(Component):
-    def __init__(self, length1, length2, awet, mass)
-        Component.__init__(name='engine', isairfoil=True, length1, length2, awet, mass)
+    def __init__(self, length1, length2, awet, mass, Aeng):
+        Component.__init__(self, name='engine', isairfoil=True, length1=length1, length2=length2, awet=awet, mass=mass)
+        self._Aeng = Aeng
+
+    def Aeng(self):
+        return self._Aeng
+
+    # def f_eng(self, aircraft, baslineAircraft):
+    #     ''' 
+    #     f_eng - Engine Factor.
         
-    def f_eng(self, aircraft, baslineAircraft):
-        ''' 
-        f_eng - Engine Factor.
+    #     aircraft - (Aircraft) The aircraft of question
         
-        aircraft - (Aircraft) The aircraft of question
+    #     baslineAircraft - (Aircraft) The baseline design aircraft
+    #     '''
+    #     # TODO drag at what time?
+    #     return aircraft.drag()/baslineAircraft.drag() * \
+    #     baslineAircraft.minf()/aircraft.minf() * \
+    #     baslineAircraft.rhoinf()/aircraft.rhoinf() 
         
-        baslineAircraft - (Aircraft) The baseline design aircraft
-        '''
-        # TODO drag at what time?
-        return aircraft.drag()/baslineAircraft.drag() * \
-        baslineAircraft.minf()/aircraft.minf() * \
-        baslineAircraft.rhoinf()/aircraft.rhoinf() 
-        
-        # return self.awet / baslineAircraft.awet
+    #     # return self.awet / baslineAircraft.awet
     
-    def _cBaseline(self):
-        '''
-        Private method for getting the c of a baseline aircraft engine
-        '''
-        return self._c
+    # def _cBaseline(self):
+    #     '''
+    #     Private method for getting the c of a baseline aircraft engine
+    #     '''
+    #     return self._c
     
-    def c(self, baslineAircraft):
-        '''
-        The streamwise length of the engines can be assumed to scale 
-        with sqrt(f eng)
-        '''
-        return baslineAircraft.components['engine']._cBaseline() * math.sqrt(f_eng)
+    # def c(self, baslineAircraft):
+    #     '''
+    #     The streamwise length of the engines can be assumed to scale 
+    #     with sqrt(f eng)
+    #     '''
+    #     return baslineAircraft.components['engine']._cBaseline() * math.sqrt(f_eng)
         
-    def mass(self, aircraft, baslineAircraft):
-        raise ValueError('to be implemented')
+    # def mass(self, aircraft, baslineAircraft):
+    #     raise ValueError('to be implemented')
         
 
         
