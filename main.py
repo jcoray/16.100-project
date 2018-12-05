@@ -24,6 +24,40 @@ def alt_fuel_plot(aircraft, max_alt, max_wfuel, max_thrust):
     plt.show()
     
     pass
+
+def alt_fuel_plot_again(aircraft, baseline, max_alt):
+    alt = np.linspace(0, max_alt, 100)
+
+    wfuel_list = list()
+    for alti in alt:
+        res = optimize_fuel_burn_again(aircraft, baseline, alti)
+        wfuel_list.append(res.fun)
+
+    plt.plot(wfuel_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Wfuel (kg)")
+    plt.title("Altitude-Fuel-Burn (varying Sref)")
+    plt.grid(True)
+    plt.show()
+
+# def all_plots_sref_part(aircraft, baseline, max_alt):
+#     alt = np.linspace(0, max_alt, 100)
+
+#     wfuel_list = list()
+#     mdd_list = list()
+#     m_perp_list=list()
+#     for alti in alt:
+#         res = optimize_fuel_burn_again(aircraft, baseline, alti)
+#         wfuel_list.append(res.fun)
+
+#     plt.plot(wfuel_list, alt)
+#     plt.ylabel("Altitude (m)")
+#     plt.xlabel("Wfuel (kg)")
+#     plt.title("Altitude-Fuel-Burn (varying Sref)")
+#     plt.grid(True)
+#     plt.show()
+    
+
     
 def alt_drag_plot(aircraft, max_alt, max_wfuel, max_thrust):
     alt = np.linspace(0, max_alt, 100)
@@ -98,19 +132,19 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     print(res)
     return res
 
-def optimize_fuel_burn_again(aircraft, baseline, max_alt):
-    # State: (altitude, Sref, Aeng)
-    x0 = (max_alt/2, 127, math.pi*(2.44**2)/4)
-    bounds = [(0, max_alt), (0.1,1e3), (0.1,100)] # TODO: Figure out how to plug-in partially defined bounds
+def optimize_fuel_burn_again(aircraft, baseline, altitude):
+    # State: (Sref)
+    x0 = (baseline.fp['Sref'],)
+    bounds = [(0.1,1e3)] # TODO: Figure out how to plug-in partially defined bounds
 
     # TODO: Create function to set state in aircraft
     def set_state(x):
         # Set state in aircraft
         # TODO: Figure out how to input wfuel here and in subsequent funs.
         # fp: altitude, Sref, Aeng
-        aircraft.fp['alt'] = x[0]
-        aircraft.fp['Sref']= x[1]
-        aircraft.fp['Aeng']= x[2]
+        aircraft.fp['alt'] = altitude
+        aircraft.fp['Sref']= x[0]
+        # aircraft.fp['Aeng']= x[2]
         aircraft.components = update_components(baseline, aircraft.fp)
         aircraft.update_fp(aircraft.fp)
         aircraft.findAeng(baseline)
@@ -141,7 +175,7 @@ def optimize_fuel_burn_again(aircraft, baseline, max_alt):
 
     res = minimize(fuel_burn_obj, x0, bounds=bounds,\
         constraints=constraints)
-    print(res)
+    #print(res)
     return res
         
 
@@ -194,18 +228,16 @@ def altitude_study_data(aircraft, altitudes):
 # base_fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
 #             'TSFC': 1.42e-5, 'Sref':127}
 
-ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
-fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
-            'TSFC': 1.42e-5, 'Sref':127}
-
+Sref = 127
 b = 35.79
-AR = b**2 / fp['Sref']
-c = math.sqrt(fp['Sref'] / AR)
+AR = b**2 / Sref
+c = math.sqrt(Sref / AR)
 print("c = ", c)
 Aeng = math.pi*2.44**2 / 4
 
-fp['AR'] = AR #lol
-fp['Aeng'] = Aeng
+ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
+fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+            'TSFC': 1.42e-5, 'Sref':Sref, 'AR':AR, 'Aeng': Aeng}
 
 s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
 s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
@@ -252,7 +284,10 @@ altitude_study_data(s3smax, altitudes)
 
 print()
 print("So it begins")
-res = optimize_fuel_burn_again(s3smax, baseline, 15e3)
+test_alt = 20e3
+print("Test alt:", test_alt)
+res = optimize_fuel_burn_again(s3smax, baseline, test_alt)
 print(s3smax.fp)
 
-#alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
+alt_fuel_plot_again(s3smax, baseline, 15e3)
