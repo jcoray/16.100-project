@@ -126,6 +126,7 @@ class Aircraft(object):
 
             Kfi = 0
             if component.isairfoil:
+                #print(component.name, component.c())
                 tici = component.t()/component.c()
                 Kfi = 1 + 2.0*tici + 60*(tici)**4
             else:
@@ -205,7 +206,7 @@ class Aircraft(object):
         return self.fp['wfinal'] * (math.exp(self.fp['TSFC']*self.ap['g']*self.ap['R']
                                     / (self.fp['Vinf']*ld)   ) - 1)
     def averageCL(self, wfuel = None):
-        L = averageLift(self,wfuel)
+        L = self.averageLift(wfuel)
         Cl = L/(1/2*self.fp['rho']*self.fp['Vinf']**2 * self.fp['Sref'])
         return Cl
     
@@ -294,6 +295,9 @@ class Wing(Component):
     def AR(self):
         # TODO placeholder until we vary AR
         return self._span / self._c
+
+    def tc(self):
+        return self.t() / self.c()
     
     def tc_perp(self):
         #~ return self.Lambda
@@ -306,6 +310,13 @@ class Wing(Component):
     def c_ext(self):
         # Math by Jose
         return 2 * self.c() / (1 + self.taper)
+
+    def vtank(self):
+        Ktank = 0.55
+        return Ktank*self.tc()*self.Sref()**(3/2)*self.AR()**(-0.5)
+
+    def get_constants(self):
+        return (self.K_wing, self.Lambda(), self.rho_box, self.omega_box, self.taper)
 
     def awet(self, fuse):
         '''

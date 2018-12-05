@@ -98,16 +98,21 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     print(res)
     return res
 
-def optimize_fuel_burn_again(aircraft, max_alt):
+def optimize_fuel_burn_again(aircraft, baseline, max_alt):
     # State: (altitude, Sref, Aeng)
     x0 = (max_alt/2, 127, math.pi*(2.44**2)/4)
-    bounds = [(0, max_alt)] # TODO: Figure out how to plug-in partially defined bounds
+    bounds = [(0, max_alt), (0.1,1e3), (0.1,100)] # TODO: Figure out how to plug-in partially defined bounds
 
     # TODO: Create function to set state in aircraft
     def set_state(x):
         # Set state in aircraft
         # TODO: Figure out how to input wfuel here and in subsequent funs.
-        pass
+        # fp: altitude, Sref, Aeng
+        aircraft.fp['alt'] = x[0]
+        aircraft.fp['Sref']= x[1]
+        aircraft.fp['Aeng']= x[2]
+        aircraft.components = update_components(baseline, aircraft.fp)
+        aircraft.update_fp(aircraft.fp)
 
     # TODO: Create constraint objective functions:
     # Drag divergence, Fuel capacity
@@ -120,6 +125,23 @@ def optimize_fuel_burn_again(aircraft, max_alt):
 
     def fuel_cap_obj(x):
         set_state(x)
+        wfuel_max = baseline.ap['rho_fuel'] * aircraft.components['wing'].vtank()
+        wfuel = aircraft.findWfuel()
+        return wfuel_max - wfuel
+
+    mdd_constraint = {'type':'ineq', 'fun': mdd_obj}
+    fuel_cap_constraint  = {'type':'ineq', 'fun': fuel_cap_obj}
+    constraints = (mdd_constraint, fuel_cap_constraint)
+
+    def fuel_burn_obj(x):
+        set_state(x)
+        wfuel = aircraft.findWfuel()
+        return wfuel
+
+    res = minimize(fuel_burn_obj, x0, bounds=bounds,\
+        constraints=constraints)
+    print(res)
+    return res
         
 
 def altitude_study_data(aircraft, altitudes):
@@ -153,6 +175,50 @@ def altitude_study_data(aircraft, altitudes):
         print(*d, sep='\t')
     return data
 
+def update_components(baseline, fp):
+    # Freestream stuff (mostly for engine)
+    _, Temp, p, rho = coesa.table(fp['alt'])
+    fp['rho'] = rho
+    fp['ainf']= math.sqrt(1.4 * 287.058 * Temp)
+    fp['Vinf'] = fp['Minf']*fp['ainf']
+
+    # Fuselage
+    fuse = baseline.components['fuse']
+
+    # Wing (Sref, AR, t/c (from baseline) )
+    Sref = fp['Sref']
+    AR = fp['AR']
+    tc = baseline.components['wing'].tc()
+    c = math.sqrt(Sref / AR)
+    b = math.sqrt(Sref * AR)
+    t = tc * c # t/c * c
+    wing = Wing(t, c, b, *baseline.components['wing'].get_constants())
+    
+    # Tail
+    ftail = 0.2
+    mass_wing = wing.mass(fuse, baseline.ap['wpay'])
+    mass_tail = ftail * mass_wing
+    fref = Sref / baseline.fp['Sref']
+    awet = fref * baseline.components['tail'].awet()
+    ttail = math.sqrt(fref) * baseline.components['tail'].t()
+    ctail = math.sqrt(fref) * baseline.components['tail'].c()
+    tail = Tail(ttail, ctail, awet, mass_tail)
+
+    # Engine
+    Aeng = fp['Aeng']
+    feng = Aeng / baseline.components['engine'].Aeng()
+    awet_eng = feng * baseline.components['engine'].awet()
+    teng = math.sqrt(feng) * baseline.components['engine'].t()
+    ceng = math.sqrt(feng) * baseline.components['engine'].c()
+    mass_eng = fp['rho'] * fp['Vinf'] / (baseline.fp['rho']*baseline.fp['Vinf']) \
+                * baseline.components['engine'].mass()
+    engine = Engine(teng, ceng, awet_eng, mass_eng, Aeng)
+
+    # Final components array
+    components_list = [fuse, wing, tail, engine]
+    components = {c.name: c for c in components_list}
+    return components
+
 # NOTE:    Assuming wfuel is 15800, as said in lecture, to calculate L/D from Drag
 
 # FIX ME - Need to measure airfoil chords from diagram to calculate accurate Re numbers.
@@ -169,13 +235,22 @@ def altitude_study_data(aircraft, altitudes):
 # base_fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
 #             'TSFC': 1.42e-5, 'Sref':127}
 
-ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81}
+ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
 fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
             'TSFC': 1.42e-5, 'Sref':127}
 
-s3sWing    = Wing(     .13*3,    3, span=35.79, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
+b = 35.79
+AR = b**2 / fp['Sref']
+c = math.sqrt(fp['Sref'] / AR)
+print("c = ", c)
+Aeng = math.pi*2.44**2 / 4
+
+fp['AR'] = AR #lol
+fp['Aeng'] = Aeng
+
+s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
 s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
-s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, math.pi*2.44**2 / 4) # awet is assumed to be for both # The nacell length was eyeballed
+s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, Aeng) # awet is assumed to be for both # The nacell length was eyeballed
 s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
 
 
@@ -194,17 +269,17 @@ print("wfuel updated", wfuel)
 print('L/D updated', s3smax.averageLD(wfuel))
 print()
 
-print("Fuel burn optimization:")
-res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
-print("Found optimal. Setting aircraft fp to optimal:")
-optimal_alt = res.x[0]
-s3smax.fp['alt'] = optimal_alt
-s3smax.update_fp(s3smax.fp)
-optimal_wfuel = s3smax.findWfuel()
-s3smax.fp['wfuel'] = optimal_wfuel
-print("Optimal altitude (m), optimal wfuel (kg):", optimal_alt, optimal_wfuel)
-print("Optimal fp:")
-print(s3smax.fp)
+# print("Fuel burn optimization:")
+# res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
+# print("Found optimal. Setting aircraft fp to optimal:")
+# optimal_alt = res.x[0]
+# s3smax.fp['alt'] = optimal_alt
+# s3smax.update_fp(s3smax.fp)
+# optimal_wfuel = s3smax.findWfuel()
+# s3smax.fp['wfuel'] = optimal_wfuel
+# print("Optimal altitude (m), optimal wfuel (kg):", optimal_alt, optimal_wfuel)
+# print("Optimal fp:")
+# print(s3smax.fp)
 # One Nacell:   L/D 18.22712568809953
 # Two Nacells:  L/D 16.73512500441754
 
@@ -213,7 +288,11 @@ print(s3smax.fp)
 # alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
 
 print()
-altitudes = list(np.linspace(3e3, 15e3, 5)) + [round(optimal_alt)]
+altitudes = list(np.linspace(3e3, 15e3, 5)) #+ [round(optimal_alt)]
 altitude_study_data(s3smax, altitudes)
 
+print()
+print("So it begins")
+res = optimize_fuel_burn_again(s3smax, baseline, 15e3)
+print(s3smax.fp)
 
