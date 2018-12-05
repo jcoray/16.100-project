@@ -37,14 +37,15 @@ class Aircraft(object):
 
         # Aircraft parameters (all assumed constant)
         if ap == None:
-            self.ap = {'woe':45e3, 'wfuelland':2300, 'wpay':20e3, \
-            'R':6500e3, 'g':9.81, 'Sref':127}
+            self.ap = {'wfuelland':2300, 'wpay':20e3, \
+            'R':6500e3, 'g':9.81}
         else: self.ap = ap
 
-        # Flight parameters (all assumed variable)
+        # Flight parameters (Optimization Parameters)
+        # Initial these are the baseline parameters
         if fp == None:
             self.fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
-            'TSFC': 1.42e-5}
+            'TSFC': 1.42e-5, 'Sref':127}
         else: 
             self.fp = fp
 
@@ -71,6 +72,11 @@ class Aircraft(object):
         return woe
         
     def update_fp(self, fp):
+        ''' 
+        Updates the aircraft state given an optimization state.
+        Inputs: parameters that changed. Then updates the rest of the aircraft to match
+        '''
+        
         self.fp = fp
 
         #print("New altitude:", self.fp['alt'])
