@@ -41,7 +41,7 @@ def alt_fuel_plot_again(aircraft, baseline, max_alt):
     plt.show()
 
 def all_plots_sref_part(aircraft, baseline, max_alt):
-    alt = np.linspace(11000, max_alt, 100)
+    alt = np.linspace(0, max_alt, 100)
 
     wfuel_list = list()
     mdd_m_perp_diff_list = list()
@@ -78,7 +78,7 @@ def all_plots_sref_part(aircraft, baseline, max_alt):
 
     
 def alt_drag_plot(aircraft, max_alt, max_wfuel, max_thrust):
-    alt = np.linspace(0, max_alt, 50)
+    alt = np.linspace(0, max_alt, 100)
     
     drag_list = list()
     for alti in alt:
@@ -294,78 +294,134 @@ def altitude_study_data(aircraft, altitudes):
 # base_fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
 #             'TSFC': 1.42e-5, 'Sref':127}
 
-Sref = 127
-b = 35.79
-AR = b**2 / Sref
-c = math.sqrt(Sref / AR)
-print("c = ", c)
-Aeng = math.pi*2.44**2 / 4
+def part1():
+    Sref = 127
+    b = 35.79
+    AR = b**2 / Sref
+    c = math.sqrt(Sref / AR)
+    print("c = ", c)
+    Aeng = math.pi*2.44**2 / 4
 
-ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
-fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
-            'TSFC': 1.42e-5, 'Sref':Sref, 'AR':AR, 'Aeng': Aeng}
+    ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
+    fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+                'TSFC': 1.42e-5, 'Sref':Sref, 'AR':AR, 'Aeng': Aeng}
 
-s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
-s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
-s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, Aeng) # awet is assumed to be for both # The nacell length was eyeballed
-s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
+    s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
+    s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
+    s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, Aeng) # awet is assumed to be for both # The nacell length was eyeballed
+    s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
 
 
-s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
-baseline = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
+    s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
 
-print('Dp', round(s3smax.profileDrag()))
-print('Di', round(s3smax.inducedDrag()))
-print('D', round(s3smax.averageDrag()))
-print('L', round(s3smax.averageLift()))
-print('L/D', s3smax.averageLD())
-print("Guessed wfuel", s3smax.fp['wfuel'])
-print('Bregue wfuel', s3smax.bregue_wfuel())
-wfuel = s3smax.findWfuel()
-print("wfuel updated", wfuel)
-print('L/D updated', s3smax.averageLD(wfuel))
-print()
+    print('Dp', round(s3smax.profileDrag()))
+    print('Di', round(s3smax.inducedDrag()))
+    print('D', round(s3smax.averageDrag()))
+    print('L', round(s3smax.averageLift()))
+    print('L/D', s3smax.averageLD())
+    print("Guessed wfuel", s3smax.fp['wfuel'])
+    print('Bregue wfuel', s3smax.bregue_wfuel())
+    wfuel = s3smax.findWfuel()
+    print("wfuel updated", wfuel)
+    print('L/D updated', s3smax.averageLD(wfuel))
+    print()
+    
+    return 0
 
-# print("Fuel burn optimization:")
-# res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
-# print("Found optimal. Setting aircraft fp to optimal:")
-# optimal_alt = res.x[0]
-# s3smax.fp['alt'] = optimal_alt
-# s3smax.update_fp(s3smax.fp)
-# optimal_wfuel = s3smax.findWfuel()
-# s3smax.fp['wfuel'] = optimal_wfuel
-# print("Optimal altitude (m), optimal wfuel (kg):", optimal_alt, optimal_wfuel)
-# print("Optimal fp:")
-# print(s3smax.fp)
-# One Nacell:   L/D 18.22712568809953
-# Two Nacells:  L/D 16.73512500441754
+def part3():
+    
+    Sref = 127
+    b = 35.79
+    AR = b**2 / Sref
+    c = math.sqrt(Sref / AR)
+    print("c = ", c)
+    Aeng = math.pi*2.44**2 / 4
 
-# alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
-# alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
-# alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
+    ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
+    fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+                'TSFC': 1.42e-5, 'Sref':Sref, 'AR':AR, 'Aeng': Aeng}
 
-print()
-altitudes = list(np.linspace(3e3, 15e3, 5)) #+ [round(optimal_alt)]
-altitude_study_data(s3smax, altitudes)
+    s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
+    s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
+    s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, Aeng) # awet is assumed to be for both # The nacell length was eyeballed
+    s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
 
-print()
-print("So it begins")
-test_alt = 15e3
-print("Test alt:", test_alt)
-res = optimize_fuel_burn_sref_alt(s3smax, baseline, test_alt)
-print('res',res)
-alts = [a*1000+10000 for a in range(5)]
-for a in alts:
-    res = optimize_fuel_burn_sref_alt(s3smax, baseline, test_alt)
-    print('Alt', a, '   X',res.x, '   Wfuel', res.fun)
-    #Alt 10000    X [ 13422.52597943    178.42461114]    Wfuel 13925.468604663049
-    #Alt 11000    X [ 13289.9721146     177.50699479]    Wfuel 13924.927986742347
-    #Alt 12000    X [ 13629.80167927    184.62443866]    Wfuel 13926.53501829638
-    #Alt 13000    X [ 13677.19563179    180.01826931]    Wfuel 13930.24982839971
-    #Alt 14000    X [ 13660.4809263     180.20236997]    Wfuel 13929.423210925443
 
-print(s3smax.fp)
+    s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
+    baseline = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
 
-print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
-#alt_fuel_plot_again(s3smax, baseline, 15e3)
-all_plots_sref_part(s3smax, baseline, 15e3)
+    # print("Fuel burn optimization:")
+    # res = optimize_fuel_burn(s3smax, 15e3, 26e3, 2*128e3)
+    # print("Found optimal. Setting aircraft fp to optimal:")
+    # optimal_alt = res.x[0]
+    # s3smax.fp['alt'] = optimal_alt
+    # s3smax.update_fp(s3smax.fp)
+    # optimal_wfuel = s3smax.findWfuel()
+    # s3smax.fp['wfuel'] = optimal_wfuel
+    # print("Optimal altitude (m), optimal wfuel (kg):", optimal_alt, optimal_wfuel)
+    # print("Optimal fp:")
+    # print(s3smax.fp)
+    # One Nacell:   L/D 18.22712568809953
+    # Two Nacells:  L/D 16.73512500441754
+
+    # alt_fuel_plot(s3smax, 15e3, 26e3, 2*128e3)
+    # alt_drag_plot(s3smax, 15e3, 26e3, 2*128e3)
+    # alt_cl_plot(s3smax, 15e3, 26e3, 2*128e3)
+    
+
+    print()
+    altitudes = list(np.linspace(3e3, 15e3, 5)) #+ [round(optimal_alt)]
+    altitude_study_data(s3smax, altitudes)
+    
+    
+def part4():
+    
+    Sref = 127
+    b = 35.79
+    AR = b**2 / Sref
+    c = math.sqrt(Sref / AR)
+    #~ print("c = ", c)
+    Aeng = math.pi*2.44**2 / 4
+
+    ap = {'wfuelland':2300, 'wpay':20e3, 'R':6500e3, 'g':9.81, 'rho_fuel': 800}
+    fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
+                'TSFC': 1.42e-5, 'Sref':Sref, 'AR':AR, 'Aeng': Aeng}
+
+    s3sWing    = Wing(     .13*c,    c, span=b, K_wing=0.71, Lambda=25*math.pi/180.0, rho_box=2700, omega_box=2.1e8, taper=0.3) 
+    s3sFuse    = Fuselage(  3.76,   38,  415, 19200 )
+    s3sNacell  = Engine(    0.69, 3.38, 59.0, 11000, Aeng) # awet is assumed to be for both # The nacell length was eyeballed
+    s3sTails   = Tail(   .1*3.25, 3.25,  115, .2 * s3sWing.mass(s3sFuse, ap['wpay'])) # Assume all the tails are one
+
+
+    s3smax = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
+    baseline = Aircraft( [s3sWing, s3sFuse, s3sNacell, s3sTails], ap=copy.deepcopy(ap), fp=copy.deepcopy(fp))
+
+    maxalt = 15e3
+    #~ print("Test alt:", test_alt)
+    #~ res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt)
+    #~ print('res',res)
+    #~ print(s3smax.fp)
+
+    def initalConditionSensitivityStudy():
+        alts = [a*1000+10000 for a in range(5)]
+        for a in alts:
+            res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt)
+            print('Alt', a, '   X',res.x, '   Wfuel', res.fun)
+            #Alt 10000    X [ 13422.52597943    178.42461114]    Wfuel 13925.468604663049
+            #Alt 11000    X [ 13289.9721146     177.50699479]    Wfuel 13924.927986742347
+            #Alt 12000    X [ 13629.80167927    184.62443866]    Wfuel 13926.53501829638
+            #Alt 13000    X [ 13677.19563179    180.01826931]    Wfuel 13930.24982839971
+            #Alt 14000    X [ 13660.4809263     180.20236997]    Wfuel 13929.423210925443
+    
+    
+    print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
+    #alt_fuel_plot_again(s3smax, baseline, 15e3)
+    all_plots_sref_part(s3smax, baseline, maxalt)
+    pass
+
+def main():
+    part4()
+    return 0
+    
+if __name__ == '__main__':
+     main()
