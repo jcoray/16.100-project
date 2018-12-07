@@ -209,6 +209,8 @@ class Aircraft(object):
         L = self.averageLift(wfuel)
         Cl = L/(1/2*self.fp['rho']*self.fp['Vinf']**2 * self.fp['Sref'])
         return Cl
+    def averageCLperp(self, wfuel=None):
+        return averageCL(wfuel)/math.cos(self.components['wing'].Lambda())**2
     
     def mdd(self, wfuel=None):
         '''M_drag-drivergance'''

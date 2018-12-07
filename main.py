@@ -43,16 +43,26 @@ def alt_fuel_plot_again(aircraft, baseline, max_alt):
 def all_plots_sref_part(aircraft, baseline, max_alt):
     alt = np.linspace(0, max_alt, 100)
 
+    sref_list = list()
     wfuel_list = list()
     mdd_m_perp_diff_list = list()
     wmax_wfuel_diff_list = list()
     for alti in alt:
         res = optimize_fuel_burn_again_plotter(aircraft, baseline, alti)
         wfuel = res.fun
+        sref_list.append(res.x[0])
         wfuel_list.append(wfuel)
         mdd_m_perp_diff_list.append(aircraft.mdd() - aircraft.m_perp())
         wmax = baseline.ap['rho_fuel'] * aircraft.components['wing'].vtank()
         wmax_wfuel_diff_list.append(wmax - wfuel)
+
+
+    plt.plot(sref_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("Sref (m^2)")
+    plt.title("Altitude-Sref (varying Sref)")
+    plt.grid(True)
+    plt.show()
 
     plt.plot(wfuel_list, alt)
     plt.ylabel("Altitude (m)")
@@ -74,8 +84,6 @@ def all_plots_sref_part(aircraft, baseline, max_alt):
     plt.title("Fuel Capacity Constraint (Positive means within constraint)")
     plt.grid(True)
     plt.show()
-    
-
     
 def alt_drag_plot(aircraft, max_alt, max_wfuel, max_thrust):
     alt = np.linspace(0, max_alt, 100)
@@ -114,8 +122,6 @@ def alt_cl_plot(aircraft, max_alt, max_wfuel, max_thrust):
     
     pass      
     
-    
-
 def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     # State: (altitude, fuel)
     x0 = (max_alt/2, max_wfuel/2)
@@ -245,17 +251,62 @@ def optimize_fuel_burn_sref_alt(aircraft, baseline, maxalt, initalt=None):
 
         
 
-def altitude_study_data(aircraft, altitudes):
+#~ def altitude_study_data(aircraft, altitudes):
+    #~ ''' 
+    #~ Collects data for altitude study, including:
+    #~ altitude, wfuel, qinf, total drag, induced drag, profile drag, CL, L/D
+    #~ '''
+    #~ dash = '-' * 40
+#~ 
+    #~ data1 = []
+    #~ data2 = []
+    #~ for a in altitudes:
+        #~ aircraft.fp['alt'] = a
+        #~ aircraft.update_fp(aircraft.fp)
+        #~ wfuel = aircraft.findWfuel()
+        #~ qinf = aircraft.fp['qinf']
+#~ 
+        #~ lift = aircraft.lift_at_time(0)
+        #~ drag = aircraft.drag_at_time(0)
+        #~ indDrag = aircraft.inducedDrag(lift=lift)
+        #~ profDrag = aircraft.profileDrag()
+        #~ CL = lift / (0.5*aircraft.fp['rho']*aircraft.fp['Sref']*aircraft.fp['Vinf']**2)
+        #~ LD = lift / drag
+        #~ CLperp = CL/math.cos(aircraft.components['wing'].Lambda())**2
+#~ 
+        #~ data1.append([a, res.x[0], aircraft.components['wing'].span(), aircraft.components['engine'].Aeng(), \
+            #~ aircraft.components['wing'].mass(), aircraft.components['tail'].mass(), aircraft.woe(), \
+            #~ aircraft.components['wing'].vtank(), res.fun])
+        #~ data2.append([a, qinf, drag, Dind, Dprof, LD, CL, CLperp, aircraft.mdd()])
+#~ 
+    #~ headers1 = ['Altitude',   'S_{ref}' , 'b' , 'A_{eng}' , 'W_{wing}', 'W_{tail}', 'W_{OE}', 'W_{fuel}', 'W_{fuel}^{max}']
+    #~ headers2 = ['Altitude', 'q', 'D', 'Dind', 'Dprof', 'LD', 'CL', 'CLperp', 'Mdd']
+   #~ 
+    #~ print("ALTITUDE STUDY DATA")
+    #~ print(*headers1, sep='\t')
+    #~ for d in data1:
+        #~ print(*d, sep=' & \t')
+    #~ 
+    #~ print(*headers2, sep='\t')
+    #~ for d in data2:
+        #~ print(*d, sep=' & \t')
+    #~ 
+    #~ return data1, data2
+    #~ 
+    
+def altitude_study_data_part4(aircraft, baseline, altitudes):
     ''' 
     Collects data for altitude study, including:
-    altitude, wfuel, qinf, total drag, induced drag, profile drag, CL, L/D
     '''
     dash = '-' * 40
 
-    data = []
+  
+    data1 = []
+    data2 = []
     for a in altitudes:
         aircraft.fp['alt'] = a
         aircraft.update_fp(aircraft.fp)
+        res = optimize_fuel_burn_again_plotter(aircraft, baseline, a)
         wfuel = aircraft.findWfuel()
         qinf = aircraft.fp['qinf']
 
@@ -265,19 +316,40 @@ def altitude_study_data(aircraft, altitudes):
         profDrag = aircraft.profileDrag()
         CL = lift / (0.5*aircraft.fp['rho']*aircraft.fp['Sref']*aircraft.fp['Vinf']**2)
         LD = lift / drag
+        CLperp = CL/math.cos(aircraft.components['wing'].Lambda())**2
 
-        data.append([a, wfuel, qinf, drag, indDrag, profDrag, CL, LD])
+        data1.append([a, \
+            round(res.x[0],2), \
+            round(aircraft.components['wing'].span(),2), \
+            round(aircraft.components['engine'].Aeng(),2), \
+            int(aircraft.components['wing'].mass(aircraft.components['fuse'],aircraft.ap['wpay'])), \
+            int(aircraft.components['tail'].mass()), \
+            int(aircraft.woe()), \
+            int(res.fun), \
+            int(aircraft.components['wing'].vtank()*baseline.ap['rho_fuel']), \
+            '''\\\ \hline'''])
+        data2.append([a, round(qinf/1000,2), round(drag/1000,1), round(indDrag/1000,1), round(profDrag/1000,1), round(LD,2), round(CL,3), round(CLperp,3), round(aircraft.mdd(),3), \
+            '''\\\ \hline'''])
 
-    headers = ['Altitude (m)', 'wfuel (kg)', 'qinf (Pa)', 'drag (N)', 'indDrag (N)', 'profDrag (N)', 'CL (1)', 'LD (1)']
-
+    headers1 = ['Altitude',   'S_{ref}' , 'b' , 'A_{eng}' , 'W_{wing}', 'W_{tail}', 'W_{OE}', 'W_{fuel}', 'W_{fuel}^{max}']
+    headers2 = ['Altitude', 'q', 'D', 'Dind', 'Dprof', 'LD', 'CL', 'CLperp', 'Mdd']
+   
     print("ALTITUDE STUDY DATA")
-    print(*headers, sep='\t')
-    for d in data:
-        print(*d, sep='\t')
-    return data
+    print(*headers1, sep='\t')
+    for d in data1:
+        print(*d , sep=' & \t')
+    
+    print(*headers2, sep='\t')
+    for d in data2:
+        print(*d, sep=' & \t')
+    
+    return data1, data2
 
 
 
+
+def part1():
+    
 # NOTE:    Assuming wfuel is 15800, as said in lecture, to calculate L/D from Drag
 
 # FIX ME - Need to measure airfoil chords from diagram to calculate accurate Re numbers.
@@ -294,7 +366,6 @@ def altitude_study_data(aircraft, altitudes):
 # base_fp = {'wfuel':15800, 'Minf':0.78, 'alt': 10000, \
 #             'TSFC': 1.42e-5, 'Sref':127}
 
-def part1():
     Sref = 127
     b = 35.79
     AR = b**2 / Sref
@@ -373,12 +444,14 @@ def part3():
     altitudes = list(np.linspace(3e3, 15e3, 5)) #+ [round(optimal_alt)]
     altitude_study_data(s3smax, altitudes)
     
-    
 def part4():
     
     Sref = 127
     b = 35.79
     AR = b**2 / Sref
+    print('AR', AR)
+    print('Lambda', 25*math.pi/180.0)
+
     c = math.sqrt(Sref / AR)
     #~ print("c = ", c)
     Aeng = math.pi*2.44**2 / 4
@@ -401,9 +474,10 @@ def part4():
     #~ res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt)
     #~ print('res',res)
     #~ print(s3smax.fp)
+    alts = [a*1000+10000 for a in range(6)]
+
 
     def initalConditionSensitivityStudy():
-        alts = [a*1000+10000 for a in range(5)]
         for a in alts:
             res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt)
             print('Alt', a, '   X',res.x, '   Wfuel', res.fun)
@@ -413,9 +487,10 @@ def part4():
             #Alt 13000    X [ 13677.19563179    180.01826931]    Wfuel 13930.24982839971
             #Alt 14000    X [ 13660.4809263     180.20236997]    Wfuel 13929.423210925443
     
+    #~ initalConditionSensitivityStudy()
     
-    print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
-    #alt_fuel_plot_again(s3smax, baseline, 15e3)
+    #~ altitude_study_data_part4(s3smax, baseline, alts)
+    #~ print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
     all_plots_sref_part(s3smax, baseline, maxalt)
     pass
 
