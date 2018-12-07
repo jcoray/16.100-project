@@ -170,7 +170,7 @@ class Aircraft(object):
         drag = self.profileDrag() + self.waveDrag() + self.inducedDrag(lift=lift)
         return drag
 
-    def averageDrag(self, wfuel= None, nsamples=50):
+    def averageDrag(self, wfuel= None, nsamples=100):
         # Values of drag average when using averaged lift vs iterating through time
         # are not that different.
         #return self.profileDrag() + self.inducedDrag() + self.waveDrag()
@@ -184,7 +184,7 @@ class Aircraft(object):
         mean_drag = sum(drag_samples) / nsamples
         return mean_drag
     
-    def averageLD(self, wfuel = None, nsamples=50):
+    def averageLD(self, wfuel = None, nsamples=100):
         # Similar to averageDrag, iterating through L/D values
         # vs using L and D's averages hadly changes anything
         #return self.averageLift()/self.averageDrag()
@@ -228,7 +228,7 @@ class Aircraft(object):
         wld = self.fp['wfuel']
         wbr = self.bregue_wfuel()
         itercount = 0
-        while abs(wbr - wld) > .01:
+        while abs(wbr - wld) > .001:
             # Hope convergance 
             wld = wbr
             ld = self.averageLD(wld)
@@ -257,7 +257,7 @@ class Aircraft(object):
         feng_Area = Aeng_guess / Aeng0
 
         #print("Beginning Aeng iterations:")
-        while abs(feng_Drag - feng_Area) > .01:
+        while abs(feng_Drag - feng_Area) > .001:
             # For current plane
             # _, Temp, p, rho = coesa.table(self.fp['alt'])
             Aeng_guess = self.fp['Aeng']
@@ -497,7 +497,7 @@ def update_components(baseline, fp):
     teng = math.sqrt(feng) * baseline.components['engine'].t()
     ceng = math.sqrt(feng) * baseline.components['engine'].c()
     mass_eng = fp['rho'] * fp['Vinf'] / (baseline.fp['rho']*baseline.fp['Vinf']) \
-                * baseline.components['engine'].mass()
+                * baseline.components['engine'].mass() * feng
     engine = Engine(teng, ceng, awet_eng, mass_eng, Aeng)
 
     # Final components array

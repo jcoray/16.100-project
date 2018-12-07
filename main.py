@@ -40,21 +40,32 @@ def alt_fuel_plot_again(aircraft, baseline, max_alt):
     plt.grid(True)
     plt.show()
 
-def all_plots_sref_part(aircraft, baseline, max_alt):
+def all_plots_sref_part(aircraft, baseline, max_alt, x0, bounds):
     alt = np.linspace(0, max_alt, 100)
+
+    # x0 = (190,)
+    # bounds = [(0.1,1e3)]
 
     sref_list = list()
     wfuel_list = list()
     mdd_m_perp_diff_list = list()
     wmax_wfuel_diff_list = list()
+    cl_list = list()
+    ld_list = list()
+    wfuel_max_list = list()
     for alti in alt:
-        res = optimize_fuel_burn_again_plotter(aircraft, baseline, alti)
+        res = optimize_fuel_burn_again_plotter(aircraft, baseline, alti,x0,bounds)
         wfuel = res.fun
         sref_list.append(res.x[0])
         wfuel_list.append(wfuel)
         mdd_m_perp_diff_list.append(aircraft.mdd() - aircraft.m_perp())
         wmax = baseline.ap['rho_fuel'] * aircraft.components['wing'].vtank()
         wmax_wfuel_diff_list.append(wmax - wfuel)
+        cl_list.append(aircraft.averageCL())
+        ld_list.append(aircraft.averageLD())
+        wfuel_max = baseline.ap['rho_fuel'] * aircraft.components['wing'].vtank()
+        wfuel_max_list.append(wfuel_max)
+
 
 
     plt.plot(sref_list, alt)
@@ -82,6 +93,36 @@ def all_plots_sref_part(aircraft, baseline, max_alt):
     plt.ylabel("Altitude (m)")
     plt.xlabel("Wmax - Wfuel")
     plt.title("Fuel Capacity Constraint (Positive means within constraint)")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(cl_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("CL")
+    plt.title("CL")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(ld_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("L/D")
+    plt.title("L/D")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(wfuel_max_list, alt)
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("wfuel max (kg)")
+    plt.title("wfuel max")
+    plt.grid(True)
+    plt.show()
+
+    plt.plot(wfuel_list, alt, 'y-', label='wfuel used')
+    plt.plot(wfuel_max_list, alt, 'b--', label='wfuel max')
+    plt.ylabel("Altitude (m)")
+    plt.xlabel("wfuel(kg)")
+    plt.title("wfuel max and wfuel used")
+    plt.legend(loc='best')
     plt.grid(True)
     plt.show()
     
@@ -156,10 +197,10 @@ def optimize_fuel_burn(aircraft, max_alt, max_wfuel, max_thrust):
     print(res)
     return res
 
-def optimize_fuel_burn_again_plotter(aircraft, baseline, altitude):
+def optimize_fuel_burn_again_plotter(aircraft, baseline, altitude, x0, bounds):
     # State: (Sref)
-    x0 = (baseline.fp['Sref'],)
-    bounds = [(0.1,1e3)] # TODO: Figure out how to plug-in partially defined bounds
+    #x0 = (baseline.fp['Sref'],)
+    #bounds = [(0.1,1e3)] # TODO: Figure out how to plug-in partially defined bounds
 
     # TODO: Create function to set state in aircraft
     def set_state(x):
@@ -202,11 +243,11 @@ def optimize_fuel_burn_again_plotter(aircraft, baseline, altitude):
     #print(res)
     return res
     
-def optimize_fuel_burn_sref_alt(aircraft, baseline, maxalt, initalt=None):
-    if initalt == None: initalt = baseline.fp['alt']
+def optimize_fuel_burn_sref_alt(aircraft, baseline, maxalt, x0, bounds):
+    #if initalt == None: initalt = baseline.fp['alt']
     # State: (alt, Sref)
-    x0 = (initalt,baseline.fp['Sref'],)
-    bounds = [(10000,maxalt),(100,200)] # TODO: Figure out how to plug-in partially defined bounds
+    #x0 = (initalt,baseline.fp['Sref'],)
+    #bounds = [(10000,maxalt),(100,200)] # TODO: Figure out how to plug-in partially defined bounds
 
     # TODO: Create function to set state in aircraft
     def set_state(x):
@@ -303,10 +344,14 @@ def altitude_study_data_part4(aircraft, baseline, altitudes):
   
     data1 = []
     data2 = []
+
+    x0 = (180,)
+    bounds = [(0.1,1e3)]
+
     for a in altitudes:
         aircraft.fp['alt'] = a
         aircraft.update_fp(aircraft.fp)
-        res = optimize_fuel_burn_again_plotter(aircraft, baseline, a)
+        res = optimize_fuel_burn_again_plotter(aircraft, baseline, a, x0, bounds)
         wfuel = aircraft.findWfuel()
         qinf = aircraft.fp['qinf']
 
@@ -471,10 +516,14 @@ def part4():
 
     maxalt = 15e3
     #~ print("Test alt:", test_alt)
-    #~ res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt)
-    #~ print('res',res)
+
+    # x0 is altitude and Sref here
+    x0 = (11e3, 180)
+    bounds = [(0, 15e3), (0.1, 1e3)]
+    res = optimize_fuel_burn_sref_alt(s3smax, baseline, maxalt, x0, bounds)
+    print('res',res)
     #~ print(s3smax.fp)
-    alts = [a*1000+10000 for a in range(6)]
+    alts = np.linspace(0, maxalt, num=100)
 
 
     def initalConditionSensitivityStudy():
@@ -491,7 +540,11 @@ def part4():
     
     #~ altitude_study_data_part4(s3smax, baseline, alts)
     #~ print("Plotting Sref Altitude-Fuel-Burn (this will take a while...)")
-    all_plots_sref_part(s3smax, baseline, maxalt)
+
+    # x0 is only Sref here
+    x0 = (190,)
+    bounds = [(0.1,1e3)]
+    all_plots_sref_part(s3smax, baseline, maxalt, x0, bounds)
     pass
 
 def main():
