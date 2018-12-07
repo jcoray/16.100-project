@@ -385,8 +385,8 @@ class Wing(Component):
         '''
         wingMass = self.K_wing * 1/self.tc_perp() * 1/math.cos(self.Lambda())**3 * \
         self.AR()**(3/2.0) * self.Sref()**(1/2.0) * self.rho_box/self.omega_box * \
-        (fuse.mass() + wpay)
-        return wingMass
+        (fuse.mass() + wpay) 
+        return 9.8*wingMass # returns mass. It's confusing. 
         
 class Fuselage(Component):
      def __init__(self, length1, length2, awet, mass):
